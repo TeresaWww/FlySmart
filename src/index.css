@@ -1,0 +1,29 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --color-navy-950: rgb(2, 20, 50);
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  min-height: 100svh;
+  font-family: var(--font-sans);
+  overflow-x: clip;
+  color-scheme: light;
+}
+
+#root {
+  width: 453px;
+  max-width: 100%;
+  margin-inline: auto;
+  min-height: 100dvh;
+  min-height: 100svh;
+}
