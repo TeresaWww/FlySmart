@@ -14,14 +14,13 @@ import { FormSelect } from './FormSelect'
 import { TravelerStepper } from './TravelerStepper'
 import { GroundTransportationCard } from './GroundTransportationCard'
 import { AirportInfoCard } from './AirportInfoCard'
-import { ResultModal } from './ResultModal'
+import { DirectionsPanel } from './DirectionsPanel'
 import {
   destinationSelectOptions,
   gateSelectOptions,
   transportSelectOptions,
 } from '../i18n/formOptions'
 import { useI18n } from '../i18n/useI18n'
-import { buildArrivalPlan } from '../lib/arrivalPlan'
 import { validateArrivalForm, type FieldErrors } from '../lib/validation'
 import {
   defaultFormState,
@@ -84,8 +83,6 @@ export function ArrivalFormView() {
   const gates = useMemo(() => gateSelectOptions(language), [language])
   const transports = useMemo(() => transportSelectOptions(language), [language])
   const destinations = useMemo(() => destinationSelectOptions(language), [language])
-
-  const plan = useMemo(() => buildArrivalPlan(form, language), [form, language])
 
   useEffect(() => {
     const prev = document.documentElement.lang
@@ -192,16 +189,6 @@ export function ArrivalFormView() {
               error={errors.gate}
             />
             <FormSelect
-              id="transport"
-              label={t('f_tr_l')}
-              placeholder={t('f_tr_p')}
-              icon={Car}
-              value={form.transport}
-              options={transports}
-              onChange={(transport) => update('transport', transport)}
-              error={errors.transport}
-            />
-            <FormSelect
               id="destination"
               label={t('f_dest_l')}
               placeholder={t('f_dest_p')}
@@ -210,6 +197,16 @@ export function ArrivalFormView() {
               options={destinations}
               onChange={(destination) => update('destination', destination)}
               error={errors.destination}
+            />
+            <FormSelect
+              id="transport"
+              label={t('f_tr_l')}
+              placeholder={t('f_tr_p')}
+              icon={Car}
+              value={form.transport}
+              options={transports}
+              onChange={(transport) => update('transport', transport)}
+              error={errors.transport}
             />
           </div>
 
@@ -239,12 +236,7 @@ export function ArrivalFormView() {
         </div>
       </main>
 
-      <ResultModal
-        open={resultOpen}
-        form={form}
-        plan={plan}
-        onClose={() => setResultOpen(false)}
-      />
+      <DirectionsPanel open={resultOpen} form={form} onClose={() => setResultOpen(false)} />
     </div>
   )
 }
