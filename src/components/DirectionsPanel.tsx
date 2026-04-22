@@ -20,6 +20,7 @@ import { labelDestination, labelGate, labelTransport } from '../i18n/formOptions
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useI18n } from '../i18n/useI18n'
 import { buildJourneyEstimate, type JourneyStepModel } from '../lib/journeyEstimate'
+import { saveRouteSnapshot } from '../lib/savedRoutesStorage'
 
 type DirectionsPanelProps = {
   open: boolean
@@ -163,7 +164,13 @@ export function DirectionsPanel({ open, form, onClose }: DirectionsPanelProps) {
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                onClick={() => setSaved((v) => !v)}
+                onClick={() => {
+                  setSaved((v) => {
+                    const next = !v
+                    if (next) saveRouteSnapshot(form)
+                    return next
+                  })
+                }}
                 className={`inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-xl ring-1 transition ${
                   saved
                     ? 'bg-[rgb(2,20,50)] text-white ring-[rgb(2,20,50)]'

@@ -37,33 +37,33 @@ export function SegmentedToggle<T extends string>({
             role="tab"
             aria-selected={selected}
             onClick={() => onChange(opt.value)}
-            className={`flex min-h-10 touch-manipulation items-center rounded-xl px-1.5 py-1 text-left transition-all duration-200 active:scale-[0.99] sm:px-2 ${
+            className={`flex min-h-11 touch-manipulation items-center rounded-xl px-1.5 py-1.5 text-left transition-all duration-200 active:scale-[0.99] sm:px-2 ${
               selected
                 ? 'bg-blue-500 text-white shadow-md shadow-blue-500/25 ring-1 ring-blue-400/40'
                 : 'bg-white text-slate-900 ring-1 ring-slate-200/70 hover:bg-slate-50'
             }`}
           >
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <span
-                className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${
+                className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${
                   selected ? 'bg-white/15' : 'bg-slate-100'
                 }`}
               >
                 <Icon
-                  className={`h-3.5 w-3.5 ${selected ? 'text-white' : 'text-slate-700'}`}
+                  className={`h-4 w-4 ${selected ? 'text-white' : 'text-slate-700'}`}
                   strokeWidth={2}
                 />
               </span>
               <span className="min-w-0">
                 <span
-                  className={`block text-[11px] font-semibold leading-tight tracking-tight ${
+                  className={`block text-xs font-semibold leading-snug tracking-tight sm:text-[13px] ${
                     selected ? 'text-white' : 'text-slate-900'
                   }`}
                 >
                   {opt.title}
                 </span>
                 <span
-                  className={`mt-px block text-[10px] font-medium leading-[1.2] tracking-tight ${
+                  className={`mt-0.5 block text-[11px] font-medium leading-snug tracking-tight sm:text-xs ${
                     selected ? 'text-white/80' : 'text-slate-500'
                   }`}
                 >

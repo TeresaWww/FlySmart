@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import {
   Car,
   Compass,
@@ -21,13 +21,9 @@ import {
   transportSelectOptions,
 } from '../i18n/formOptions'
 import { useI18n } from '../i18n/useI18n'
+import { useArrivalForm } from '../context/ArrivalFormContext'
 import { validateArrivalForm, type FieldErrors } from '../lib/validation'
-import {
-  defaultFormState,
-  type ArrivalFormState,
-  type FlightScope,
-  type IntlTravelerSegment,
-} from '../types/arrival'
+import { type ArrivalFormState, type FlightScope, type IntlTravelerSegment } from '../types/arrival'
 
 const htmlLang = {
   en: 'en',
@@ -40,7 +36,7 @@ const htmlLang = {
 
 export function ArrivalFormView() {
   const { language, t } = useI18n()
-  const [form, setForm] = useState<ArrivalFormState>(defaultFormState)
+  const { form, setForm } = useArrivalForm()
   const [errors, setErrors] = useState<FieldErrors>({})
   const [resultOpen, setResultOpen] = useState(false)
 
@@ -92,17 +88,16 @@ export function ArrivalFormView() {
     }
   }, [language])
 
-  const update = <K extends keyof ArrivalFormState>(key: K, value: ArrivalFormState[K]) => {
+  const update = useCallback(<K extends keyof ArrivalFormState>(key: K, value: ArrivalFormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
     const field = key as keyof FieldErrors
-    if (field in errors) {
-      setErrors((e) => {
-        const next = { ...e }
-        delete next[field]
-        return next
-      })
-    }
-  }
+    setErrors((e) => {
+      if (!(field in e)) return e
+      const next = { ...e }
+      delete next[field]
+      return next
+    })
+  }, [setForm])
 
   const onFlightScope = (flightScope: FlightScope) => {
     setForm((prev) => ({
@@ -208,6 +203,17 @@ export function ArrivalFormView() {
               onChange={(transport) => update('transport', transport)}
               error={errors.transport}
             />
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-left ring-1 ring-slate-100">
+              <input
+                type="checkbox"
+                checked={form.checkedBaggage}
+                onChange={(e) => update('checkedBaggage', e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-xs font-medium leading-snug text-slate-800 sm:text-sm">
+                {t('f_bags_chk')}
+              </span>
+            </label>
           </div>
 
           <div className="mt-7">

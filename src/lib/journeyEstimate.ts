@@ -23,7 +23,7 @@ export type JourneyEstimateModel = {
 }
 
 function formSeed(form: ArrivalFormState): number {
-  const s = `${form.gate}|${form.transport}|${form.destination}|${form.travelers}|${form.flightScope}|${form.intlTravelerSegment}|${form.trustedTravelerProgram ? 1 : 0}`
+  const s = `${form.gate}|${form.transport}|${form.destination}|${form.travelers}|${form.flightScope}|${form.intlTravelerSegment}|${form.trustedTravelerProgram ? 1 : 0}|${form.checkedBaggage ? 1 : 0}`
   let h = 2166136261
   for (let i = 0; i < s.length; i++) {
     h ^= s.charCodeAt(i)
@@ -157,17 +157,19 @@ export function buildJourneyEstimate(form: ArrivalFormState): JourneyEstimateMod
     })
   }
 
-  const bagsBase =
-    form.flightScope === 'international'
-      ? 19 + spread(seed, 40, 0, 11)
-      : 11 + spread(seed, 41, 0, 9)
-  const bagsWait = Math.round(bagsBase * 0.72)
-  const bagsWalk = Math.max(2, bagsBase - bagsWait)
-  steps.push({
-    kind: 'bags',
-    lineMin: bagsBase,
-    cat: { walk: bagsWalk, wait: bagsWait, transit: 0 },
-  })
+  if (form.checkedBaggage) {
+    const bagsBase =
+      form.flightScope === 'international'
+        ? 19 + spread(seed, 40, 0, 11)
+        : 11 + spread(seed, 41, 0, 9)
+    const bagsWait = Math.round(bagsBase * 0.72)
+    const bagsWalk = Math.max(2, bagsBase - bagsWait)
+    steps.push({
+      kind: 'bags',
+      lineMin: bagsBase,
+      cat: { walk: bagsWalk, wait: bagsWait, transit: 0 },
+    })
+  }
 
   const walkT = 6 + spread(seed, 50, 0, 5) + (party >= 5 ? 2 : 0)
   const walkMi = Math.round((0.21 + (seed % 19) / 100) * 10) / 10

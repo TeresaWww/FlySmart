@@ -19,6 +19,7 @@ const en = {
   seg_non_citizen_t: 'Non-citizen',
   seg_non_citizen_d: 'Foreign passport or visa',
   ttp_checkbox: 'Trusted Traveler Program (GE, NEXUS, SENTRI)',
+  f_bags_chk: 'I have checked bags',
 
   f_gate_l: 'Select Your Gate',
   f_gate_p: 'Gate Number',
@@ -52,6 +53,12 @@ const en = {
   ap_sub: 'Helpful Tips and FAQ',
 
   hdr_menu: 'Open menu',
+  hdr_menu_sheet_title: 'Menu',
+  hdr_menu_language: 'Change language',
+  hdr_menu_bookmarks: 'Bookmarked routes',
+  hdr_bookmarks_title: 'Saved routes',
+  hdr_bookmarks_empty: 'No saved routes yet. Open directions and tap the bookmark to save one.',
+  hdr_bookmarks_hint: 'Tap a route to load it into the form.',
 
   r_title: 'Your arrival plan',
   r_sub: 'Summary for Sea-Tac (mock estimate)',
@@ -164,6 +171,7 @@ const es: Record<MessageKey, string> = {
   seg_non_citizen_t: 'No ciudadano',
   seg_non_citizen_d: 'Pasaporte extranjero o visa',
   ttp_checkbox: 'Programa Viajero de Confianza (GE, NEXUS, SENTRI)',
+  f_bags_chk: 'Tengo equipaje facturado',
 
   f_gate_l: 'Selecciona tu puerta',
   f_gate_p: 'Número de puerta',
@@ -197,6 +205,12 @@ const es: Record<MessageKey, string> = {
   ap_sub: 'Consejos útiles y preguntas frecuentes',
 
   hdr_menu: 'Abrir menú',
+  hdr_menu_sheet_title: 'Menú',
+  hdr_menu_language: 'Cambiar idioma',
+  hdr_menu_bookmarks: 'Rutas guardadas',
+  hdr_bookmarks_title: 'Rutas guardadas',
+  hdr_bookmarks_empty: 'Aún no hay rutas. Abre indicaciones y toca el marcador para guardar.',
+  hdr_bookmarks_hint: 'Toca una ruta para cargarla en el formulario.',
 
   r_title: 'Tu plan de llegada',
   r_sub: 'Resumen para Sea-Tac (estimación de ejemplo)',
@@ -308,6 +322,7 @@ const zh: Record<MessageKey, string> = {
   seg_non_citizen_t: '非公民',
   seg_non_citizen_d: '外国护照或签证',
   ttp_checkbox: '可信旅客计划（GE、NEXUS、SENTRI）',
+  f_bags_chk: '我有托运行李',
 
   f_gate_l: '选择登机口',
   f_gate_p: '登机口编号',
@@ -341,6 +356,12 @@ const zh: Record<MessageKey, string> = {
   ap_sub: '实用提示与常见问题',
 
   hdr_menu: '打开菜单',
+  hdr_menu_sheet_title: '菜单',
+  hdr_menu_language: '更改语言',
+  hdr_menu_bookmarks: '已保存路线',
+  hdr_bookmarks_title: '已保存路线',
+  hdr_bookmarks_empty: '暂无保存的路线。打开路线指引并点击书签即可保存。',
+  hdr_bookmarks_hint: '点击一条路线可填入表单。',
 
   r_title: '您的到达计划',
   r_sub: 'Sea-Tac 摘要（示例估算）',
@@ -445,6 +466,7 @@ const ko: Record<MessageKey, string> = {
   seg_non_citizen_t: '비시민',
   seg_non_citizen_d: '외국 여권 또는 비자',
   ttp_checkbox: '신뢰 여행자 프로그램(GE, NEXUS, SENTRI)',
+  f_bags_chk: '위탁 수하물이 있어요',
 
   f_gate_l: '게이트 선택',
   f_gate_p: '게이트 번호',
@@ -478,6 +500,12 @@ const ko: Record<MessageKey, string> = {
   ap_sub: '유용한 팁과 FAQ',
 
   hdr_menu: '메뉴 열기',
+  hdr_menu_sheet_title: '메뉴',
+  hdr_menu_language: '언어 변경',
+  hdr_menu_bookmarks: '저장된 경로',
+  hdr_bookmarks_title: '저장된 경로',
+  hdr_bookmarks_empty: '저장된 경로가 없습니다. 길 안내에서 북마크를 눌러 저장하세요.',
+  hdr_bookmarks_hint: '경로를 누르면 양식에 불러옵니다.',
 
   r_title: '도착 계획',
   r_sub: 'Sea-Tac 요약(예시 추정)',
@@ -584,6 +612,7 @@ const ja: Record<MessageKey, string> = {
   seg_non_citizen_t: '非市民',
   seg_non_citizen_d: '外国パスポートまたはビザ',
   ttp_checkbox: '信頼できる旅行者プログラム（GE、NEXUS、SENTRI）',
+  f_bags_chk: '預け荷物がある',
 
   f_gate_l: 'ゲートを選択',
   f_gate_p: 'ゲート番号',
@@ -617,6 +646,12 @@ const ja: Record<MessageKey, string> = {
   ap_sub: 'ヒントとよくある質問',
 
   hdr_menu: 'メニューを開く',
+  hdr_menu_sheet_title: 'メニュー',
+  hdr_menu_language: '言語を変更',
+  hdr_menu_bookmarks: '保存したルート',
+  hdr_bookmarks_title: '保存したルート',
+  hdr_bookmarks_empty: 'まだ保存されたルートがありません。道順でブックマークをタップして保存してください。',
+  hdr_bookmarks_hint: 'ルートをタップするとフォームに読み込みます。',
 
   r_title: '到着プラン',
   r_sub: 'Sea-Tac の概要（参考見積もり）',
@@ -723,6 +758,7 @@ const vi: Record<MessageKey, string> = {
   seg_non_citizen_t: 'Không phải công dân',
   seg_non_citizen_d: 'Hộ chiếu nước ngoài hoặc thị thực',
   ttp_checkbox: 'Chương trình du khách tin cậy (GE, NEXUS, SENTRI)',
+  f_bags_chk: 'Tôi có hành lý ký gửi',
 
   f_gate_l: 'Chọn cửa lên máy bay',
   f_gate_p: 'Số cửa',
@@ -756,6 +792,12 @@ const vi: Record<MessageKey, string> = {
   ap_sub: 'Mẹo hay & Câu hỏi thường gặp',
 
   hdr_menu: 'Mở menu',
+  hdr_menu_sheet_title: 'Menu',
+  hdr_menu_language: 'Đổi ngôn ngữ',
+  hdr_menu_bookmarks: 'Lộ trình đã lưu',
+  hdr_bookmarks_title: 'Lộ trình đã lưu',
+  hdr_bookmarks_empty: 'Chưa có lộ trình. Mở chỉ đường và chạm biểu tượng bookmark để lưu.',
+  hdr_bookmarks_hint: 'Chạm một lộ trình để điền vào biểu mẫu.',
 
   r_title: 'Kế hoạch đến',
   r_sub: 'Tóm tắt Sea-Tac (ước tính mẫu)',
