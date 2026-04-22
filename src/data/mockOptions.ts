@@ -1,13 +1,11 @@
-export const gateOptions = [
-  { value: '', label: 'Gate Number' },
-  { value: 'A1', label: 'Gate A1' },
-  { value: 'A12', label: 'Gate A12' },
-  { value: 'B7', label: 'Gate B7' },
-  { value: 'C9', label: 'Gate C9' },
-  { value: 'D2', label: 'Gate D2' },
-  { value: 'N12', label: 'Gate N12' },
-  { value: 'S4', label: 'Gate S4' },
+import { gateGroups } from './seaTacGates'
+
+const gatePairs = [
+  { value: '' as const, label: 'Gate Number' as const },
+  ...gateGroups.map((g) => ({ value: g.range, label: `Gate ${g.range}` })),
 ] as const
+
+export const gateOptions = gatePairs
 
 export const carouselOptions = [
   { value: '', label: 'Carousel Number' },

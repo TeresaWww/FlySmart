@@ -84,8 +84,13 @@ function stepTitle(t: TFn, step: JourneyStepModel, labels: { gate: string; trans
 
 function stepDetail(t: TFn, step: JourneyStepModel): string | null {
   switch (step.kind) {
-    case 'gate':
-      return t('dir_step_gate_detail', { mi: step.miles, walk: step.lineMin })
+    case 'gate': {
+      const dist = t('dir_step_gate_detail', { mi: step.miles, walk: step.lineMin })
+      if (step.baggageInstruction != null && step.walkToBaggageMin != null && step.walkToBaggageMax != null) {
+        return `${step.baggageInstruction} ${t('dir_step_gate_baggage_range', { lo: step.walkToBaggageMin, hi: step.walkToBaggageMax })} — ${dist}`
+      }
+      return dist
+    }
     case 'bags':
       return t('dir_step_bags_detail', { min: step.lineMin })
     case 'walk_transit':

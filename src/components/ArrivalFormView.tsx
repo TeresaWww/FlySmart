@@ -20,6 +20,7 @@ import {
   gateSelectOptions,
   transportSelectOptions,
 } from '../i18n/formOptions'
+import { findGateGroup } from '../data/seaTacGates'
 import { useI18n } from '../i18n/useI18n'
 import { useArrivalForm } from '../context/ArrivalFormContext'
 import { validateArrivalForm, type FieldErrors } from '../lib/validation'
@@ -76,7 +77,10 @@ export function ArrivalFormView() {
     [t],
   )
 
-  const gates = useMemo(() => gateSelectOptions(language), [language])
+  const gates = useMemo(
+    () => gateSelectOptions(language, form.flightScope),
+    [language, form.flightScope],
+  )
   const transports = useMemo(() => transportSelectOptions(language), [language])
   const destinations = useMemo(() => destinationSelectOptions(language), [language])
 
@@ -100,16 +104,22 @@ export function ArrivalFormView() {
   }, [setForm])
 
   const onFlightScope = (flightScope: FlightScope) => {
-    setForm((prev) => ({
-      ...prev,
-      flightScope,
-      ...(flightScope === 'domestic'
-        ? {
-            intlTravelerSegment: 'citizen' as const,
-            trustedTravelerProgram: false,
-          }
-        : {}),
-    }))
+    setForm((prev) => {
+      const next = {
+        ...prev,
+        flightScope,
+        ...(flightScope === 'domestic'
+          ? {
+              intlTravelerSegment: 'citizen' as const,
+              trustedTravelerProgram: false,
+            }
+          : {}),
+      }
+      if (prev.gate && !findGateGroup(prev.gate, flightScope)) {
+        return { ...next, gate: '' as const }
+      }
+      return next
+    })
   }
 
   const submit = () => {

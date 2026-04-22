@@ -1,10 +1,20 @@
 import type { ArrivalFormState } from '../types/arrival'
+import { walkMinutesToBaggageClaim } from './gateBaggageWalk'
 
 type Cat = { walk: number; wait: number; transit: number }
 
 export type JourneyStepModel =
   | { kind: 'deplane'; lineMin: number; cat: Cat }
-  | { kind: 'gate'; lineMin: number; miles: number; cat: Cat }
+  | {
+      kind: 'gate'
+      lineMin: number
+      miles: number
+      cat: Cat
+      /** Walking time to Baggage Claim when gate matches Sea-Tac bands. */
+      baggageInstruction?: string
+      walkToBaggageMin?: number
+      walkToBaggageMax?: number
+    }
   | { kind: 'customs'; lineMin: number; badgeMin: number; cat: Cat }
   | { kind: 'bags'; lineMin: number; cat: Cat }
   | { kind: 'walk_transit'; lineMin: number; miles: number; cat: Cat }
@@ -126,8 +136,13 @@ export function buildJourneyEstimate(form: ArrivalFormState): JourneyEstimateMod
   const tp = transportProfile(form.transport, seed, destRide, destPrice)
 
   const deplaneMin = 4
-  const gateMin = 5 + spread(seed, 20, 0, 3) + Math.min(4, Math.floor(party / 2))
-  const gateMiles = (0.18 + (seed % 17) / 100) as number
+  const toBaggage = walkMinutesToBaggageClaim(form.gate, form.flightScope, seed)
+  const gateMin = toBaggage
+    ? toBaggage.lineMin
+    : 5 + spread(seed, 20, 0, 3) + Math.min(4, Math.floor(party / 2))
+  const gateMiles = toBaggage
+    ? toBaggage.miles
+    : Math.round((0.18 + (seed % 17) / 100) * 10) / 10
 
   const steps: JourneyStepModel[] = [
     {
@@ -138,8 +153,15 @@ export function buildJourneyEstimate(form: ArrivalFormState): JourneyEstimateMod
     {
       kind: 'gate',
       lineMin: gateMin,
-      miles: Math.round(gateMiles * 10) / 10,
+      miles: gateMiles,
       cat: { walk: gateMin, wait: 0, transit: 0 },
+      ...(toBaggage
+        ? {
+            baggageInstruction: toBaggage.instruction,
+            walkToBaggageMin: toBaggage.timeMin,
+            walkToBaggageMax: toBaggage.timeMax,
+          }
+        : {}),
     },
   ]
 

@@ -1,19 +1,16 @@
+import { activeGateClusters } from '../data/seaTacGates'
+import type { FlightScope } from '../types/arrival'
 import type { LanguageCode } from '../types/language'
 import { t } from './t'
 
 export type SelectOption = { value: string; label: string }
 
-export function gateSelectOptions(lang: LanguageCode): SelectOption[] {
+/** One option per cluster (e.g. A1–A3), not individual gates. */
+export function gateSelectOptions(lang: LanguageCode, flightScope: FlightScope): SelectOption[] {
   const w = t(lang, 'opt_gate_word')
   return [
     { value: '', label: t(lang, 'opt_gate_ph') },
-    { value: 'A1', label: `${w} A1` },
-    { value: 'A12', label: `${w} A12` },
-    { value: 'B7', label: `${w} B7` },
-    { value: 'C9', label: `${w} C9` },
-    { value: 'D2', label: `${w} D2` },
-    { value: 'N12', label: `${w} N12` },
-    { value: 'S4', label: `${w} S4` },
+    ...activeGateClusters(flightScope).map((g) => ({ value: g.range, label: `${w} ${g.range}` })),
   ]
 }
 
@@ -41,7 +38,8 @@ export function destinationSelectOptions(lang: LanguageCode): SelectOption[] {
 }
 
 export function labelGate(lang: LanguageCode, value: string) {
-  return gateSelectOptions(lang).find((o) => o.value === value)?.label ?? value
+  if (!value) return ''
+  return `${t(lang, 'opt_gate_word')} ${value}`
 }
 
 export function labelTransport(lang: LanguageCode, value: string) {
