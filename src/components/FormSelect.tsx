@@ -1,6 +1,6 @@
 import { ChevronDown, type LucideIcon } from 'lucide-react'
 
-type Option = { value: string; label: string }
+type Option = { value: string; label: string; disabled?: boolean }
 
 type FormSelectProps = {
   id: string
@@ -55,7 +55,7 @@ export function FormSelect({
           {options
             .filter((o) => o.value !== '')
             .map((o) => (
-              <option key={o.value} value={o.value}>
+              <option key={o.value} value={o.value} disabled={o.disabled}>
                 {o.label}
               </option>
             ))}

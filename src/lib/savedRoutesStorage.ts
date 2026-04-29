@@ -1,4 +1,3 @@
-import { findGateGroup } from '../data/seaTacGates'
 import { defaultFormState, type ArrivalFormState } from '../types/arrival'
 
 const STORAGE_KEY = 'flysmart-saved-routes-v1'
@@ -16,11 +15,7 @@ export function normalizeArrivalForm(raw: unknown): ArrivalFormState {
   const travelers = typeof o.travelers === 'number' ? Math.min(12, Math.max(1, Math.round(o.travelers))) : 1
   const flightScope: ArrivalFormState['flightScope'] =
     o.flightScope === 'international' ? 'international' : 'domestic'
-  let gate = typeof o.gate === 'string' ? o.gate : ''
-  if (gate) {
-    const g = findGateGroup(gate, flightScope)
-    if (g) gate = g.range
-  }
+  const gate = typeof o.gate === 'string' ? o.gate : ''
   return {
     ...defaultFormState,
     flightScope,

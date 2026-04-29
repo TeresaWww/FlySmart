@@ -1,4 +1,5 @@
 import type { ArrivalFormState } from '../types/arrival'
+import { matchDestinationBenchmark } from './destinationBenchmarks'
 import { walkMinutesToBaggageClaim } from './gateBaggageWalk'
 
 type Cat = { walk: number; wait: number; transit: number }
@@ -86,6 +87,13 @@ function transportProfile(
         priceLow: 3,
         priceHigh: 6,
       }
+    case 'bus':
+      return {
+        ride: 48 + spread(seed, 13, 0, 16) + Math.round(d * 0.6),
+        pickupWait: spread(seed, 14, 7, 18),
+        priceLow: 3,
+        priceHigh: 8,
+      }
     case 'taxi':
       return {
         ride: 22 + spread(seed, 3, 0, 12) + d,
@@ -132,7 +140,7 @@ function sumCats(steps: JourneyStepModel[]): { walk: number; wait: number; trans
 export function buildJourneyEstimate(form: ArrivalFormState): JourneyEstimateModel {
   const seed = formSeed(form)
   const party = Math.min(8, Math.max(1, form.travelers))
-  const { ride: destRide, price: destPrice } = destExtra(form.destination)
+  const { ride: destRide, price: destPrice } = destExtra(matchDestinationBenchmark(form.destination))
   const tp = transportProfile(form.transport, seed, destRide, destPrice)
 
   const deplaneMin = 4

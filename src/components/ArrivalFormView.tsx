@@ -1,25 +1,21 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import {
   Car,
-  Compass,
   Globe,
   IdCard,
   MapPin,
   Users,
-  Warehouse,
 } from 'lucide-react'
 import { HeaderBar } from './HeaderBar'
 import { SegmentedToggle, type SegmentDefinition } from './SegmentedToggle'
 import { FormSelect } from './FormSelect'
+import { GateInput } from './GateInput'
+import { DestinationInput } from './DestinationInput'
 import { TravelerStepper } from './TravelerStepper'
 import { GroundTransportationCard } from './GroundTransportationCard'
 import { AirportInfoCard } from './AirportInfoCard'
 import { DirectionsPanel } from './DirectionsPanel'
-import {
-  destinationSelectOptions,
-  gateSelectOptions,
-  transportSelectOptions,
-} from '../i18n/formOptions'
+import { destinationSelectOptions, transportSelectOptions } from '../i18n/formOptions'
 import { findGateGroup } from '../data/seaTacGates'
 import { useI18n } from '../i18n/useI18n'
 import { useArrivalForm } from '../context/ArrivalFormContext'
@@ -40,6 +36,7 @@ export function ArrivalFormView() {
   const { form, setForm } = useArrivalForm()
   const [errors, setErrors] = useState<FieldErrors>({})
   const [resultOpen, setResultOpen] = useState(false)
+  const [transportClock, setTransportClock] = useState(() => new Date())
 
   const flightSegments: SegmentDefinition<FlightScope>[] = useMemo(
     () => [
@@ -77,20 +74,11 @@ export function ArrivalFormView() {
     [t],
   )
 
-  const gates = useMemo(
-    () => gateSelectOptions(language, form.flightScope),
-    [language, form.flightScope],
+  const transports = useMemo(
+    () => transportSelectOptions(language, transportClock),
+    [language, transportClock],
   )
-  const transports = useMemo(() => transportSelectOptions(language), [language])
   const destinations = useMemo(() => destinationSelectOptions(language), [language])
-
-  useEffect(() => {
-    const prev = document.documentElement.lang
-    document.documentElement.lang = htmlLang[language]
-    return () => {
-      document.documentElement.lang = prev
-    }
-  }, [language])
 
   const update = useCallback(<K extends keyof ArrivalFormState>(key: K, value: ArrivalFormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -102,6 +90,19 @@ export function ArrivalFormView() {
       return next
     })
   }, [setForm])
+
+  useEffect(() => {
+    const prev = document.documentElement.lang
+    document.documentElement.lang = htmlLang[language]
+    return () => {
+      document.documentElement.lang = prev
+    }
+  }, [language])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setTransportClock(new Date()), 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   const onFlightScope = (flightScope: FlightScope) => {
     setForm((prev) => {
@@ -133,7 +134,7 @@ export function ArrivalFormView() {
     <div className="min-h-dvh min-h-svh bg-slate-100 pb-[max(2.5rem,env(safe-area-inset-bottom))]">
       <HeaderBar />
 
-      <main className="mx-auto -mt-8 w-full max-w-md pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
+      <main className="mx-auto -mt-8 w-full max-w-2xl pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
         <div className="rounded-3xl bg-white/70 px-1 pb-6 pt-2 text-center shadow-sm ring-1 ring-white/60 backdrop-blur-sm">
           <h1 className="px-4 text-xl font-bold leading-snug text-[rgb(2,20,50)]">
             {t('arr_title')}
@@ -183,21 +184,18 @@ export function ArrivalFormView() {
           </div>
 
           <div className="mt-6 space-y-4">
-            <FormSelect
+            <GateInput
               id="gate"
               label={t('f_gate_l')}
               placeholder={t('f_gate_p')}
-              icon={Warehouse}
               value={form.gate}
-              options={gates}
               onChange={(gate) => update('gate', gate)}
               error={errors.gate}
             />
-            <FormSelect
+            <DestinationInput
               id="destination"
               label={t('f_dest_l')}
               placeholder={t('f_dest_p')}
-              icon={Compass}
               value={form.destination}
               options={destinations}
               onChange={(destination) => update('destination', destination)}

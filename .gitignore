@@ -36,3 +36,4 @@ __pycache__/
 # Node (frontend)
 node_modules/
 dist/
+.vercel

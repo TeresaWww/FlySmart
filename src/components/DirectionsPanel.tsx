@@ -82,26 +82,55 @@ function stepTitle(t: TFn, step: JourneyStepModel, labels: { gate: string; trans
   }
 }
 
-function stepDetail(t: TFn, step: JourneyStepModel): string | null {
+function afterMetricSeparator(text: string): string {
+  const parts = text.split('·')
+  return parts.length > 1 ? parts.slice(1).join('·').trim() : text
+}
+
+function stepDetailBullets(t: TFn, step: JourneyStepModel): string[] {
   switch (step.kind) {
-    case 'gate': {
-      const dist = t('dir_step_gate_detail', { mi: step.miles, walk: step.lineMin })
-      if (step.baggageInstruction != null && step.walkToBaggageMin != null && step.walkToBaggageMax != null) {
-        return `${step.baggageInstruction} ${t('dir_step_gate_baggage_range', { lo: step.walkToBaggageMin, hi: step.walkToBaggageMax })} — ${dist}`
-      }
-      return dist
-    }
+    case 'gate':
+      if (step.baggageInstruction != null) return [step.baggageInstruction]
+      return []
     case 'bags':
-      return t('dir_step_bags_detail', { min: step.lineMin })
+      return [t('dir_step_bags_detail', { min: step.lineMin })]
     case 'walk_transit':
-      return t('dir_step_walk_transit_detail', { mi: step.miles, walk: step.lineMin })
+      return [afterMetricSeparator(t('dir_step_walk_transit_detail', { mi: step.miles, walk: step.lineMin }))]
     case 'transit':
-      return t('dir_step_transit_detail', { ride: step.rideMin })
+      return [t('dir_step_transit_detail', { ride: step.rideMin })]
     case 'walk_dest':
-      return t('dir_step_walk_dest_detail', { mi: step.miles, walk: step.lineMin })
+      return [afterMetricSeparator(t('dir_step_walk_dest_detail', { mi: step.miles, walk: step.lineMin }))]
     default:
-      return null
+      return []
   }
+}
+
+function minuteRange(center: number, spread = 2): string {
+  return `${Math.max(1, center - spread)}-${center + spread} min`
+}
+
+function mileRange(center: number): string {
+  const low = Math.max(0.1, Math.round((center - 0.1) * 10) / 10)
+  const high = Math.round((center + 0.1) * 10) / 10
+  return `${low}-${high} mi`
+}
+
+function stepMetrics(step: JourneyStepModel): { label: string; value: string }[] {
+  if (step.kind === 'arrived') return []
+
+  const metrics: { label: string; value: string }[] = []
+  if ('miles' in step) metrics.push({ label: 'Distance', value: mileRange(step.miles) })
+  if (step.kind === 'transit') {
+    metrics.push({ label: 'Ride', value: minuteRange(step.rideMin, 5) })
+    metrics.push({ label: 'Wait', value: minuteRange(step.pickupWaitMin, 3) })
+    return metrics
+  }
+  if (step.kind === 'gate' && step.walkToBaggageMin != null && step.walkToBaggageMax != null) {
+    metrics.push({ label: 'Time', value: `${step.walkToBaggageMin}-${step.walkToBaggageMax} min` })
+  } else {
+    metrics.push({ label: 'Time', value: minuteRange(step.lineMin) })
+  }
+  return metrics
 }
 
 export function DirectionsPanel({ open, form, onClose }: DirectionsPanelProps) {
@@ -213,7 +242,8 @@ export function DirectionsPanel({ open, form, onClose }: DirectionsPanelProps) {
             {visibleSteps.map((step, i) => {
               const isLast = i === visibleSteps.length - 1
               const title = stepTitle(t, step, labels)
-              const detail = stepDetail(t, step)
+              const bullets = stepDetailBullets(t, step)
+              const metrics = stepMetrics(step)
               return (
                 <li key={`${step.kind}-${i}`}>
                   <div className="flex gap-3 py-3">
@@ -233,11 +263,28 @@ export function DirectionsPanel({ open, form, onClose }: DirectionsPanelProps) {
                       <p className="text-[15px] font-semibold leading-snug text-[rgb(2,20,50)]">
                         {title}
                       </p>
-                      {detail ? (
-                        <p className="mt-1 flex items-start gap-1 text-sm text-slate-600">
-                          <span className="mt-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500" />
-                          {detail}
-                        </p>
+                      {bullets.length > 0 ? (
+                        <ul className="mt-2 space-y-1.5">
+                          {bullets.map((detail) => (
+                            <li key={detail} className="flex items-start gap-2 text-sm leading-snug text-slate-600">
+                              <span className="mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500" />
+                              <span>{detail}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                      {metrics.length > 0 ? (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {metrics.map((metric) => (
+                            <span
+                              key={metric.label}
+                              className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-[rgb(2,20,50)]"
+                            >
+                              <span className="text-slate-500">{metric.label}</span>
+                              <span>{metric.value}</span>
+                            </span>
+                          ))}
+                        </div>
                       ) : null}
                       {step.kind === 'customs' ? (
                         <p className="mt-2 inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-900">
@@ -246,9 +293,6 @@ export function DirectionsPanel({ open, form, onClose }: DirectionsPanelProps) {
                       ) : null}
                       {step.kind === 'transit' ? (
                         <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <span className="inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-900">
-                            {t('dir_step_transit_wait_badge', { min: step.pickupWaitMin })}
-                          </span>
                           <span className="inline-flex rounded-full border border-sky-200 bg-white px-3 py-1 text-xs font-semibold text-[rgb(2,20,50)]">
                             {t('dir_step_transit_price', {
                               low: estimate.priceLow,
@@ -276,7 +320,6 @@ export function DirectionsPanel({ open, form, onClose }: DirectionsPanelProps) {
               </p>
             </div>
             <div className="shrink-0 text-right text-xs leading-relaxed text-slate-700">
-              <div>{t('dir_footer_wait', { min: estimate.sumWait })}</div>
               <div>{t('dir_footer_walk', { min: estimate.sumWalk })}</div>
               <div>{t('dir_footer_transit', { min: estimate.sumTransit })}</div>
               <div className="mt-1 font-semibold text-[rgb(2,20,50)]">
