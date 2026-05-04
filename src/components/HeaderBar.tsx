@@ -32,7 +32,7 @@ export function HeaderBar() {
         className="pointer-events-none absolute -right-8 -top-16 h-40 w-40 rounded-full bg-white/10 blur-2xl"
         aria-hidden
       />
-      <div className="relative mx-auto flex max-w-md items-center justify-between">
+      <div className="relative mx-auto flex w-full max-w-2xl items-center justify-between">
         <button
           type="button"
           onClick={() => setMenuOpen((o) => !o)}

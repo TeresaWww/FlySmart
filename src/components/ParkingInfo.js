@@ -1,0 +1,1 @@
+export { ParkingInfo, default } from './ParkingInfoContent'

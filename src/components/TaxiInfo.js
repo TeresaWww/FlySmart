@@ -1,0 +1,1 @@
+export { TaxiInfo, default } from './TaxiInfoContent'
