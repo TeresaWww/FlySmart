@@ -1,6 +1,11 @@
 import type { ArrivalFormState } from '../types/arrival'
-import { matchDestinationBenchmark } from './destinationBenchmarks'
+import { resolveDestinationBenchmark } from './destinationResolve'
 import { walkMinutesToBaggageClaim } from './gateBaggageWalk'
+
+/** No destination and no ground transport — estimate airport exit only (no onward ride). */
+export function isAirportExitOnlyForm(form: ArrivalFormState): boolean {
+  return !form.transport?.trim() && !form.destination?.trim()
+}
 
 type Cat = { walk: number; wait: number; transit: number }
 
@@ -140,8 +145,12 @@ function sumCats(steps: JourneyStepModel[]): { walk: number; wait: number; trans
 export function buildJourneyEstimate(form: ArrivalFormState): JourneyEstimateModel {
   const seed = formSeed(form)
   const party = Math.min(8, Math.max(1, form.travelers))
-  const { ride: destRide, price: destPrice } = destExtra(matchDestinationBenchmark(form.destination))
-  const tp = transportProfile(form.transport, seed, destRide, destPrice)
+  const airportOnly = isAirportExitOnlyForm(form)
+  const hasTransport = Boolean(form.transport?.trim())
+  const { ride: destRide, price: destPrice } = destExtra(resolveDestinationBenchmark(form.destination))
+  const tp = airportOnly
+    ? { ride: 0, pickupWait: 0, priceLow: 0, priceHigh: 0 }
+    : transportProfile(hasTransport ? form.transport : 'rideshare', seed, destRide, destPrice)
 
   const deplaneMin = 4
   const toBaggage = walkMinutesToBaggageClaim(form.gate, form.flightScope, seed)
@@ -201,33 +210,35 @@ export function buildJourneyEstimate(form: ArrivalFormState): JourneyEstimateMod
     })
   }
 
-  const walkT = 6 + spread(seed, 50, 0, 5) + (party >= 5 ? 2 : 0)
-  const walkMi = Math.round((0.21 + (seed % 19) / 100) * 10) / 10
-  steps.push({
-    kind: 'walk_transit',
-    lineMin: walkT,
-    miles: walkMi,
-    cat: { walk: walkT, wait: 0, transit: 0 },
-  })
+  if (!airportOnly) {
+    const walkT = 6 + spread(seed, 50, 0, 5) + (party >= 5 ? 2 : 0)
+    const walkMi = Math.round((0.21 + (seed % 19) / 100) * 10) / 10
+    steps.push({
+      kind: 'walk_transit',
+      lineMin: walkT,
+      miles: walkMi,
+      cat: { walk: walkT, wait: 0, transit: 0 },
+    })
 
-  const ride = tp.ride
-  const pickup = tp.pickupWait
-  steps.push({
-    kind: 'transit',
-    lineMin: ride + pickup,
-    rideMin: ride,
-    pickupWaitMin: pickup,
-    cat: { walk: 0, wait: pickup, transit: ride },
-  })
+    const ride = tp.ride
+    const pickup = tp.pickupWait
+    steps.push({
+      kind: 'transit',
+      lineMin: ride + pickup,
+      rideMin: ride,
+      pickupWaitMin: pickup,
+      cat: { walk: 0, wait: pickup, transit: ride },
+    })
 
-  const walkD = 4 + spread(seed, 60, 0, 4) + (party >= 6 ? 1 : 0)
-  const walkDMi = Math.round((0.11 + (seed % 13) / 100) * 10) / 10
-  steps.push({
-    kind: 'walk_dest',
-    lineMin: walkD,
-    miles: walkDMi,
-    cat: { walk: walkD, wait: 0, transit: 0 },
-  })
+    const walkD = 4 + spread(seed, 60, 0, 4) + (party >= 6 ? 1 : 0)
+    const walkDMi = Math.round((0.11 + (seed % 13) / 100) * 10) / 10
+    steps.push({
+      kind: 'walk_dest',
+      lineMin: walkD,
+      miles: walkDMi,
+      cat: { walk: walkD, wait: 0, transit: 0 },
+    })
+  }
 
   steps.push({ kind: 'arrived', lineMin: 0, cat: { walk: 0, wait: 0, transit: 0 } })
 

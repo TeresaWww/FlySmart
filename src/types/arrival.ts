@@ -12,6 +12,10 @@ export type ArrivalFormState = {
   checkedBaggage: boolean
   gate: string
   transport: string
+  /** 2–3 transports to compare side-by-side. */
+  compareTransports: string[]
+  /** If true, show short "best for" badges (heuristic for now). */
+  recommendationMode: boolean
   destination: string
   travelers: number
 }
@@ -23,6 +27,8 @@ export const defaultFormState: ArrivalFormState = {
   checkedBaggage: true,
   gate: '',
   transport: '',
+  compareTransports: ['rideshare', 'link', 'taxi'],
+  recommendationMode: true,
   destination: '',
   travelers: 1,
 }

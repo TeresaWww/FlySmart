@@ -13,11 +13,11 @@ export function validateArrivalForm(
   const errors: FieldErrors = {}
 
   if (!form.gate || !findGateGroup(form.gate, form.flightScope)) errors.gate = t(lang, 'e_gate')
-  if (!form.transport) errors.transport = t(lang, 'e_transport')
-  else if (transportSelectOptions(lang).find((o) => o.value === form.transport)?.disabled) {
-    errors.transport = t(lang, 'e_transport')
+  if (form.transport?.trim()) {
+    if (transportSelectOptions(lang).find((o) => o.value === form.transport)?.disabled) {
+      errors.transport = t(lang, 'e_transport')
+    }
   }
-  if (!form.destination.trim()) errors.destination = t(lang, 'e_dest')
 
   return errors
 }

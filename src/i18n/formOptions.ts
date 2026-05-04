@@ -1,7 +1,8 @@
 import { activeGateClusters } from '../data/seaTacGates'
 import type { FlightScope } from '../types/arrival'
 import type { LanguageCode } from '../types/language'
-import { matchDestinationBenchmark } from '../lib/destinationBenchmarks'
+import { destinationLabelForId } from '../data/destinationsCatalog'
+import { resolveDestinationBenchmark } from '../lib/destinationResolve'
 import { t } from './t'
 
 export type SelectOption = { value: string; label: string; disabled?: boolean }
@@ -69,14 +70,18 @@ export function labelGate(lang: LanguageCode, value: string) {
 }
 
 export function labelTransport(lang: LanguageCode, value: string) {
+  if (!value) return ''
   return transportSelectOptions(lang).find((o) => o.value === value)?.label ?? value
 }
 
 export function labelDestination(lang: LanguageCode, value: string) {
   if (!value) return ''
+  const catalogLabel = destinationLabelForId(value)
+  if (catalogLabel) return catalogLabel
   return destinationSelectOptions(lang).find((o) => o.value === value)?.label ?? value
 }
 
 export function labelDestinationBenchmark(lang: LanguageCode, value: string) {
-  return destinationSelectOptions(lang).find((o) => o.value === matchDestinationBenchmark(value))?.label ?? value
+  const bench = resolveDestinationBenchmark(value)
+  return destinationSelectOptions(lang).find((o) => o.value === bench)?.label ?? value
 }

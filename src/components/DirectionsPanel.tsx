@@ -19,7 +19,7 @@ import type { MessageKey } from '../i18n/dictionaries'
 import { labelDestination, labelGate, labelTransport } from '../i18n/formOptions'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useI18n } from '../i18n/useI18n'
-import { buildJourneyEstimate, type JourneyStepModel } from '../lib/journeyEstimate'
+import { buildJourneyEstimate, isAirportExitOnlyForm, type JourneyStepModel } from '../lib/journeyEstimate'
 import { saveRouteSnapshot } from '../lib/savedRoutesStorage'
 
 type DirectionsPanelProps = {
@@ -58,7 +58,12 @@ function StepIcon({ step, transport }: { step: JourneyStepModel; transport: stri
 
 type TFn = (key: MessageKey, vars?: Record<string, string | number>) => string
 
-function stepTitle(t: TFn, step: JourneyStepModel, labels: { gate: string; transport: string; dest: string }): string {
+function stepTitle(
+  t: TFn,
+  step: JourneyStepModel,
+  labels: { gate: string; transport: string; dest: string },
+  airportExitOnly: boolean,
+): string {
   const { gate, transport, dest } = labels
   switch (step.kind) {
     case 'deplane':
@@ -76,7 +81,9 @@ function stepTitle(t: TFn, step: JourneyStepModel, labels: { gate: string; trans
     case 'walk_dest':
       return t('dir_step_walk_dest', { walk: step.lineMin })
     case 'arrived':
-      return t('dir_step_arrived', { dest })
+      return airportExitOnly
+        ? t('dir_step_arrived_landside')
+        : t('dir_step_arrived', { dest: dest || t('dir_onward_generic') })
     default:
       return ''
   }
@@ -137,11 +144,15 @@ export function DirectionsPanel({ open, form, onClose }: DirectionsPanelProps) {
   const { language, t } = useI18n()
   const [saved, setSaved] = useState(false)
   const estimate = useMemo(() => buildJourneyEstimate(form), [form])
+  const airportExitOnly = useMemo(() => isAirportExitOnlyForm(form), [form])
 
   const labels = useMemo(
     () => ({
       gate: labelGate(language, form.gate),
-      transport: labelTransport(language, form.transport),
+      transport: labelTransport(
+        language,
+        form.transport?.trim() ? form.transport : 'rideshare',
+      ),
       dest: labelDestination(language, form.destination),
     }),
     [language, form.gate, form.transport, form.destination],
@@ -159,12 +170,17 @@ export function DirectionsPanel({ open, form, onClose }: DirectionsPanelProps) {
   }, [open, onClose])
 
   useEffect(() => {
-    if (!open) setSaved(false)
+    if (!open) {
+      const id = requestAnimationFrame(() => setSaved(false))
+      return () => cancelAnimationFrame(id)
+    }
+    return undefined
   }, [open])
 
   if (!open) return null
 
   const visibleSteps = estimate.steps
+  const routeDestLabel = labels.dest || t('dir_onward_generic')
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
@@ -232,7 +248,9 @@ export function DirectionsPanel({ open, form, onClose }: DirectionsPanelProps) {
               {t('dir_overview')}
             </div>
             <p className="mt-2 text-sm leading-snug text-slate-700">
-              {t('dir_route_line', { gate: labels.gate, dest: labels.dest })}
+              {airportExitOnly
+                ? t('dir_route_exit_only', { gate: labels.gate })
+                : t('dir_route_line', { gate: labels.gate, dest: routeDestLabel })}
             </p>
           </div>
         </div>
@@ -241,7 +259,7 @@ export function DirectionsPanel({ open, form, onClose }: DirectionsPanelProps) {
           <ol className="mt-1 space-y-0">
             {visibleSteps.map((step, i) => {
               const isLast = i === visibleSteps.length - 1
-              const title = stepTitle(t, step, labels)
+              const title = stepTitle(t, step, labels, airportExitOnly)
               const bullets = stepDetailBullets(t, step)
               const metrics = stepMetrics(step)
               return (
@@ -249,7 +267,10 @@ export function DirectionsPanel({ open, form, onClose }: DirectionsPanelProps) {
                   <div className="flex gap-3 py-3">
                     <div className="flex w-11 shrink-0 flex-col items-center">
                       <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-sky-50 ring-1 ring-sky-100">
-                        <StepIcon step={step} transport={form.transport} />
+                        <StepIcon
+                          step={step}
+                          transport={form.transport?.trim() ? form.transport : 'rideshare'}
+                        />
                       </span>
                       {!isLast ? (
                         <ChevronDown
@@ -323,7 +344,9 @@ export function DirectionsPanel({ open, form, onClose }: DirectionsPanelProps) {
               <div>{t('dir_footer_walk', { min: estimate.sumWalk })}</div>
               <div>{t('dir_footer_transit', { min: estimate.sumTransit })}</div>
               <div className="mt-1 font-semibold text-[rgb(2,20,50)]">
-                {t('dir_footer_price', { low: estimate.priceLow, high: estimate.priceHigh })}
+                {airportExitOnly && estimate.priceLow === 0 && estimate.priceHigh === 0
+                  ? t('dir_footer_price_na')
+                  : t('dir_footer_price', { low: estimate.priceLow, high: estimate.priceHigh })}
               </div>
             </div>
           </div>

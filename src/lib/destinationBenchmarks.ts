@@ -38,7 +38,6 @@ const destinationBenchmarks: readonly DestinationBenchmark[] = [
       'auburn',
       'burien',
       'des moines',
-      'seatac',
     ],
   },
   {

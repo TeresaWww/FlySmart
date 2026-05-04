@@ -11,6 +11,8 @@ type FormSelectProps = {
   options: readonly Option[]
   onChange: (value: string) => void
   error?: string
+  /** When true, empty value is a valid choice (first option is not disabled). */
+  allowBlank?: boolean
 }
 
 export function FormSelect({
@@ -22,6 +24,7 @@ export function FormSelect({
   options,
   onChange,
   error,
+  allowBlank = false,
 }: FormSelectProps) {
   const invalid = Boolean(error)
 
@@ -49,7 +52,7 @@ export function FormSelect({
               : 'border-slate-200 focus:border-blue-400 focus:ring-blue-200'
           }`}
         >
-          <option value="" disabled>
+          <option value="" disabled={!allowBlank}>
             {placeholder}
           </option>
           {options

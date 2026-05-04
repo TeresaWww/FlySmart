@@ -15,7 +15,8 @@ import { TravelerStepper } from './TravelerStepper'
 import { GroundTransportationCard } from './GroundTransportationCard'
 import { AirportInfoCard } from './AirportInfoCard'
 import { DirectionsPanel } from './DirectionsPanel'
-import { destinationSelectOptions, transportSelectOptions } from '../i18n/formOptions'
+import { CompareOptionsPanel } from './CompareOptionsPanel'
+import { transportSelectOptions } from '../i18n/formOptions'
 import { findGateGroup } from '../data/seaTacGates'
 import { useI18n } from '../i18n/useI18n'
 import { useArrivalForm } from '../context/ArrivalFormContext'
@@ -36,6 +37,7 @@ export function ArrivalFormView() {
   const { form, setForm } = useArrivalForm()
   const [errors, setErrors] = useState<FieldErrors>({})
   const [resultOpen, setResultOpen] = useState(false)
+  const [compareOpen, setCompareOpen] = useState(false)
   const [transportClock, setTransportClock] = useState(() => new Date())
 
   const flightSegments: SegmentDefinition<FlightScope>[] = useMemo(
@@ -78,8 +80,6 @@ export function ArrivalFormView() {
     () => transportSelectOptions(language, transportClock),
     [language, transportClock],
   )
-  const destinations = useMemo(() => destinationSelectOptions(language), [language])
-
   const update = useCallback(<K extends keyof ArrivalFormState>(key: K, value: ArrivalFormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
     const field = key as keyof FieldErrors
@@ -128,6 +128,27 @@ export function ArrivalFormView() {
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) return
     setResultOpen(true)
+  }
+
+  const openCompare = () => {
+    const nextErrors = validateArrivalForm(form, language)
+    setErrors(nextErrors)
+    if (Object.keys(nextErrors).length > 0) return
+    setCompareOpen(true)
+  }
+
+  const compareOptions = transports.filter((o) => o.value !== '')
+  const compareSelected = form.compareTransports ?? []
+  const toggleCompare = (id: string) => {
+    setForm((prev) => {
+      const current = Array.from(new Set(prev.compareTransports.filter(Boolean)))
+      const exists = current.includes(id)
+      let next = exists ? current.filter((x) => x !== id) : [...current, id]
+      next = next.filter(Boolean)
+      if (next.length > 3) next = next.slice(next.length - 3)
+      if (next.length === 0) next = [id]
+      return { ...prev, compareTransports: next }
+    })
   }
 
   return (
@@ -194,23 +215,67 @@ export function ArrivalFormView() {
             />
             <DestinationInput
               id="destination"
-              label={t('f_dest_l')}
+              label={`${t('f_dest_l')} ${t('lbl_optional')}`}
               placeholder={t('f_dest_p')}
               value={form.destination}
-              options={destinations}
               onChange={(destination) => update('destination', destination)}
               error={errors.destination}
             />
             <FormSelect
               id="transport"
-              label={t('f_tr_l')}
-              placeholder={t('f_tr_p')}
+              label={`${t('f_tr_l')} ${t('lbl_optional')}`}
+              placeholder={t('f_tr_skip')}
               icon={Car}
               value={form.transport}
               options={transports}
               onChange={(transport) => update('transport', transport)}
               error={errors.transport}
+              allowBlank
             />
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-3 ring-1 ring-slate-100">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-[rgb(2,20,50)]">{t('cta_compare')}</p>
+                  <p className="mt-0.5 text-xs text-slate-600">{t('cmp_subtitle')}</p>
+                </div>
+                <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={form.recommendationMode}
+                    onChange={(e) => update('recommendationMode', e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span>Badges</span>
+                </label>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {compareOptions.map((o) => {
+                  const selected = compareSelected.includes(o.value)
+                  const disabled = Boolean(o.disabled)
+                  return (
+                    <button
+                      key={o.value}
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => toggleCompare(o.value)}
+                      className={`min-h-10 touch-manipulation rounded-full px-3 py-1.5 text-xs font-semibold ring-1 transition ${
+                        disabled
+                          ? 'cursor-not-allowed bg-slate-50 text-slate-400 ring-slate-200'
+                          : selected
+                            ? 'bg-[rgb(2,20,50)] text-white ring-[rgb(2,20,50)]'
+                            : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50'
+                      }`}
+                      aria-pressed={selected}
+                    >
+                      {o.label}
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="mt-2 text-[11px] text-slate-500">Select up to 3.</p>
+            </div>
             <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-left ring-1 ring-slate-100">
               <input
                 type="checkbox"
@@ -241,6 +306,14 @@ export function ArrivalFormView() {
             {t('cta_directions')}
           </button>
 
+          <button
+            type="button"
+            onClick={openCompare}
+            className="mt-3 flex min-h-12 w-full touch-manipulation items-center justify-center rounded-2xl bg-white text-base font-semibold text-[rgb(2,20,50)] ring-1 ring-slate-200 shadow-sm transition hover:bg-slate-50 active:scale-[0.99]"
+          >
+            {t('cta_compare')}
+          </button>
+
           <p className="mt-4 text-center text-xs italic text-slate-400">{t('step2')}</p>
         </section>
 
@@ -251,6 +324,12 @@ export function ArrivalFormView() {
       </main>
 
       <DirectionsPanel open={resultOpen} form={form} onClose={() => setResultOpen(false)} />
+      <CompareOptionsPanel
+        open={compareOpen}
+        form={form}
+        transports={form.compareTransports}
+        onClose={() => setCompareOpen(false)}
+      />
     </div>
   )
 }
