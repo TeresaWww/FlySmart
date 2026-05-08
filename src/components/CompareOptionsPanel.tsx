@@ -55,14 +55,12 @@ export function CompareOptionsPanel({ open, form, transports, onClose }: Props) 
   }, [form, transports, language])
 
   const bestConvenience = useMemo(() => {
-    if (!form.recommendationMode) return null
     return cards.reduce((best, c) => (best == null || c.totalMin < best.totalMin ? c : best), null as CompareCardModel | null)
-  }, [cards, form.recommendationMode])
+  }, [cards])
 
   const lowestCost = useMemo(() => {
-    if (!form.recommendationMode) return null
     return cards.reduce((best, c) => (best == null || c.costLow < best.costLow ? c : best), null as CompareCardModel | null)
-  }, [cards, form.recommendationMode])
+  }, [cards])
 
   if (!open) return null
 
@@ -116,12 +114,12 @@ export function CompareOptionsPanel({ open, form, transports, onClose }: Props) 
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-slate-900">{c.title}</p>
                       <div className="mt-2 flex flex-wrap gap-2">
-                        {form.recommendationMode && showConvenience ? (
+                        {showConvenience ? (
                           <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
                             {t('cmp_badge_best_convenience')}
                           </span>
                         ) : null}
-                        {form.recommendationMode && showLowest ? (
+                        {showLowest ? (
                           <span className="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800 ring-1 ring-amber-200">
                             {t('cmp_badge_lowest_cost')}
                           </span>

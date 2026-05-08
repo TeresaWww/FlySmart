@@ -281,21 +281,10 @@ export function ArrivalFormView() {
               allowBlank
             />
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-3 ring-1 ring-slate-100">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-[rgb(2,20,50)]">{t('cta_compare')}</p>
-                  <p className="mt-0.5 text-xs text-slate-600">{t('cmp_subtitle')}</p>
-                </div>
-                <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={form.recommendationMode}
-                    onChange={(e) => update('recommendationMode', e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span>Badges</span>
-                </label>
+            <div className="mx-auto w-full max-w-xl rounded-2xl border border-sky-200 bg-sky-50/70 p-3 ring-1 ring-sky-100">
+              <div>
+                <p className="text-sm font-semibold text-[rgb(2,20,50)]">{t('cta_compare')}</p>
+                <p className="mt-0.5 text-xs text-slate-600">{t('cmp_subtitle')}</p>
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
@@ -323,6 +312,13 @@ export function ArrivalFormView() {
                 })}
               </div>
               <p className="mt-2 text-[11px] text-slate-500">Select up to 3.</p>
+              <button
+                type="button"
+                onClick={openCompare}
+                className="mt-3 flex min-h-12 w-full touch-manipulation items-center justify-center rounded-2xl bg-white text-base font-semibold text-[rgb(2,20,50)] ring-1 ring-sky-200 shadow-sm transition hover:bg-sky-50 active:scale-[0.99]"
+              >
+                {t('cta_compare')}
+              </button>
             </div>
             <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-left ring-1 ring-slate-100">
               <input
@@ -352,14 +348,6 @@ export function ArrivalFormView() {
             className="mt-8 flex min-h-14 w-full touch-manipulation items-center justify-center rounded-2xl bg-[rgb(2,20,50)] text-base font-semibold text-white shadow-lg shadow-slate-900/20 transition hover:brightness-110 active:scale-[0.99]"
           >
             {t('cta_directions')}
-          </button>
-
-          <button
-            type="button"
-            onClick={openCompare}
-            className="mt-3 flex min-h-12 w-full touch-manipulation items-center justify-center rounded-2xl bg-white text-base font-semibold text-[rgb(2,20,50)] ring-1 ring-slate-200 shadow-sm transition hover:bg-slate-50 active:scale-[0.99]"
-          >
-            {t('cta_compare')}
           </button>
 
           <p className="mt-4 text-center text-xs italic text-slate-400">{t('step2')}</p>
