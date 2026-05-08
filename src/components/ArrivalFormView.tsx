@@ -1,3 +1,5 @@
+import { getPrediction } from '../api/predict'
+
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import {
   Car,
@@ -123,11 +125,57 @@ export function ArrivalFormView() {
     })
   }
 
-  const submit = () => {
+  const submit = async () => {
+
     const nextErrors = validateArrivalForm(form, language)
+  
     setErrors(nextErrors)
+  
     if (Object.keys(nextErrors).length > 0) return
-    setResultOpen(true)
+  
+    // -----------------------------
+    // Convert frontend form
+    // → backend format
+    // -----------------------------
+    const backendInput = {
+  
+      is_domestic: form.flightScope === 'domestic',
+  
+      is_usa:
+        form.intlTravelerSegment === 'citizen',
+  
+      is_trusted:
+        form.trustedTravelerProgram,
+  
+      gate: form.gate,
+  
+      has_baggage:
+        form.checkedBaggage,
+  
+      transport:
+        form.transport || 'none'
+    }
+  
+    console.log("Sending:", backendInput)
+  
+    try {
+  
+      const result = await getPrediction(backendInput)
+  
+      console.log("Backend result:", result)
+  
+      // TEMP
+      //alert(`Estimated Exit Time: ${result.total_exit_time} min`)
+  
+      setResultOpen(true)
+  
+    } catch (err) {
+  
+      console.error(err)
+  
+      alert("Backend connection failed")
+  
+    }
   }
 
   const openCompare = () => {
