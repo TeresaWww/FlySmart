@@ -39,6 +39,7 @@ export function ArrivalFormView() {
   const { form, setForm } = useArrivalForm()
   const [errors, setErrors] = useState<FieldErrors>({})
   const [resultOpen, setResultOpen] = useState(false)
+  const [prediction, setPrediction] = useState<any>(null)
   const [compareOpen, setCompareOpen] = useState(false)
   const [transportClock, setTransportClock] = useState(() => new Date())
 
@@ -161,6 +162,7 @@ export function ArrivalFormView() {
     try {
   
       const result = await getPrediction(backendInput)
+      setPrediction(result)
   
       console.log("Backend result:", result)
   
@@ -359,7 +361,12 @@ export function ArrivalFormView() {
         </div>
       </main>
 
-      <DirectionsPanel open={resultOpen} form={form} onClose={() => setResultOpen(false)} />
+      <DirectionsPanel
+      open={resultOpen}
+      form={form}
+      prediction={prediction}
+      onClose={() => setResultOpen(false)}
+      />
       <CompareOptionsPanel
         open={compareOpen}
         form={form}

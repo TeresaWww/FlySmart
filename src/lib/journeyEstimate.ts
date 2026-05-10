@@ -38,6 +38,11 @@ export type JourneyEstimateModel = {
   priceHigh: number
 }
 
+/** Backend /predict: models output total minutes in customs; queue ≈ total − 5. */
+export type ExitPredictionInput = {
+  customs_time?: number | null
+}
+
 function formSeed(form: ArrivalFormState): number {
   const s = `${form.gate}|${form.transport}|${form.destination}|${form.travelers}|${form.flightScope}|${form.intlTravelerSegment}|${form.trustedTravelerProgram ? 1 : 0}|${form.checkedBaggage ? 1 : 0}`
   let h = 2166136261
@@ -142,7 +147,18 @@ function sumCats(steps: JourneyStepModel[]): { walk: number; wait: number; trans
   )
 }
 
-export function buildJourneyEstimate(form: ArrivalFormState): JourneyEstimateModel {
+function modelCustomsTotalMinutes(prediction: ExitPredictionInput | null | undefined): number | null {
+  if (prediction == null) return null
+  const raw = prediction.customs_time
+  if (typeof raw !== 'number' || Number.isNaN(raw)) return null
+  const rounded = Math.max(0, Math.round(raw))
+  return rounded > 0 ? rounded : null
+}
+
+export function buildJourneyEstimate(
+  form: ArrivalFormState,
+  prediction?: ExitPredictionInput | null,
+): JourneyEstimateModel {
   const seed = formSeed(form)
   const party = Math.min(8, Math.max(1, form.travelers))
   const airportOnly = isAirportExitOnlyForm(form)
@@ -183,16 +199,31 @@ export function buildJourneyEstimate(form: ArrivalFormState): JourneyEstimateMod
   ]
 
   if (form.flightScope === 'international') {
-    let customs = 32
-    if (form.trustedTravelerProgram) customs = 11 + spread(seed, 30, 0, 6)
-    else if (form.intlTravelerSegment === 'citizen') customs = 24 + spread(seed, 31, 0, 10)
-    else customs = 38 + spread(seed, 32, 0, 14)
-    const badge = Math.max(5, customs - spread(seed, 33, 0, 4))
+    const predictedTotal = modelCustomsTotalMinutes(prediction ?? null)
+    let customs: number
+    let badge: number
+    let cat: Cat
+
+    if (predictedTotal != null) {
+      customs = predictedTotal
+      const queue = Math.max(0, customs - 5)
+      badge = queue
+      const nonQueue = customs - queue
+      cat = { walk: nonQueue, wait: queue, transit: 0 }
+    } else {
+      customs = 32
+      if (form.trustedTravelerProgram) customs = 11 + spread(seed, 30, 0, 6)
+      else if (form.intlTravelerSegment === 'citizen') customs = 24 + spread(seed, 31, 0, 10)
+      else customs = 38 + spread(seed, 32, 0, 14)
+      badge = Math.max(5, customs - spread(seed, 33, 0, 4))
+      cat = { walk: 0, wait: customs, transit: 0 }
+    }
+
     steps.push({
       kind: 'customs',
       lineMin: customs,
       badgeMin: badge,
-      cat: { walk: 0, wait: customs, transit: 0 },
+      cat,
     })
   }
 

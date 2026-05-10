@@ -25,6 +25,7 @@ import { saveRouteSnapshot } from '../lib/savedRoutesStorage'
 type DirectionsPanelProps = {
   open: boolean
   form: ArrivalFormState
+  prediction: any
   onClose: () => void
 }
 
@@ -71,7 +72,9 @@ function stepTitle(
     case 'gate':
       return t('dir_step_gate', { gate, walk: step.lineMin })
     case 'customs':
-      return t('dir_step_customs', { min: step.lineMin })
+      return t('dir_step_customs', {
+        min: step.lineMin
+      })
     case 'bags':
       return t('dir_step_bags', { min: step.lineMin })
     case 'walk_transit':
@@ -140,10 +143,15 @@ function stepMetrics(step: JourneyStepModel): { label: string; value: string }[]
   return metrics
 }
 
-export function DirectionsPanel({ open, form, onClose }: DirectionsPanelProps) {
+export function DirectionsPanel({
+  open,
+  form,
+  prediction,
+  onClose
+}: DirectionsPanelProps) {
   const { language, t } = useI18n()
   const [saved, setSaved] = useState(false)
-  const estimate = useMemo(() => buildJourneyEstimate(form), [form])
+  const estimate = useMemo(() => buildJourneyEstimate(form, prediction), [form, prediction])
   const airportExitOnly = useMemo(() => isAirportExitOnlyForm(form), [form])
 
   const labels = useMemo(
@@ -308,9 +316,11 @@ export function DirectionsPanel({ open, form, onClose }: DirectionsPanelProps) {
                         </div>
                       ) : null}
                       {step.kind === 'customs' ? (
-                        <p className="mt-2 inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-900">
-                          {t('dir_step_customs_badge', { min: step.badgeMin })}
-                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <p className="inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-900">
+                            {t('dir_step_customs_badge', { min: step.badgeMin })}
+                          </p>
+                        </div>
                       ) : null}
                       {step.kind === 'transit' ? (
                         <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -337,7 +347,9 @@ export function DirectionsPanel({ open, form, onClose }: DirectionsPanelProps) {
                 <Clock className="h-5 w-5 text-[rgb(2,20,50)]" aria-hidden />
               </span>
               <p className="text-base font-bold text-[rgb(2,20,50)]">
-                {t('dir_footer_total', { min: estimate.totalMin })}
+              {t('dir_footer_total', {
+                min: estimate.totalMin,
+              })}
               </p>
             </div>
             <div className="shrink-0 text-right text-xs leading-relaxed text-slate-700">
