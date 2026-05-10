@@ -24,7 +24,6 @@ dist-ssr
 *.sw?
 
 # Ignore model files
-backend/*.pkl
 
 # Python
 __pycache__/
