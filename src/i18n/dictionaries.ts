@@ -103,6 +103,7 @@ const en = {
   r_ttp: 'Trusted Traveler Program',
 
   e_gate: 'Select your arrival gate.',
+  e_gate_invalid: 'Invalid gate — not in range for this airport. Try again.',
   e_carousel: 'Select a baggage carousel.',
   e_transport: 'Choose how you are leaving the airport.',
   e_dest: 'Choose your destination area.',
@@ -288,6 +289,7 @@ const es: Record<MessageKey, string> = {
   r_ttp: 'Programa de viajero de confianza',
 
   e_gate: 'Selecciona tu puerta de llegada.',
+  e_gate_invalid: 'Puerta no válida: fuera del rango para este aeropuerto. Inténtalo de nuevo.',
   e_carousel: 'Selecciona un carrusel de equipaje.',
   e_transport: 'Elige cómo sales del aeropuerto.',
   e_dest: 'Elige tu zona de destino.',
@@ -473,6 +475,7 @@ const zh: Record<MessageKey, string> = {
   r_ttp: '可信旅客计划',
 
   e_gate: '请选择到达登机口。',
+  e_gate_invalid: '登机口无效：不在该机场范围内。请重试。',
   e_carousel: '请选择行李转盘。',
   e_transport: '请选择离开机场的方式。',
   e_dest: '请选择目的地区域。',
@@ -648,6 +651,7 @@ const ko: Record<MessageKey, string> = {
   r_ttp: '신뢰 여행자 프로그램',
 
   e_gate: '도착 게이트를 선택하세요.',
+  e_gate_invalid: '유효하지 않은 게이트입니다. 이 공항 범위에 없습니다. 다시 시도하세요.',
   e_carousel: '수하물 캐러셀을 선택하세요.',
   e_transport: '공항을 떠나는 방법을 선택하세요.',
   e_dest: '목적 지역을 선택하세요.',
@@ -826,6 +830,7 @@ const ja: Record<MessageKey, string> = {
   r_ttp: '信頼できる旅行者プログラム',
 
   e_gate: '到着ゲートを選択してください。',
+  e_gate_invalid: '無効なゲートです。この空港の範囲外です。もう一度お試しください。',
   e_carousel: '手荷物カルーセルを選択してください。',
   e_transport: '空港からの移動方法を選択してください。',
   e_dest: '目的地エリアを選択してください。',
@@ -1004,6 +1009,7 @@ const vi: Record<MessageKey, string> = {
   r_ttp: 'Chương trình du khách tin cậy',
 
   e_gate: 'Chọn cửa đến của bạn.',
+  e_gate_invalid: 'Cửa không hợp lệ — ngoài phạm vi sân bay này. Thử lại.',
   e_carousel: 'Chọn băng chuyền hành lý.',
   e_transport: 'Chọn cách bạn rời sân bay.',
   e_dest: 'Chọn khu vực đến.',
