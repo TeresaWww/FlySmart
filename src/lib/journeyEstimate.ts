@@ -2,9 +2,14 @@ import type { ArrivalFormState } from '../types/arrival'
 import { resolveDestinationBenchmark } from './destinationResolve'
 import { walkMinutesToBaggageClaim } from './gateBaggageWalk'
 
-/** No destination and no ground transport — estimate airport exit only (no onward ride). */
+/** No destination and no ground transport — landside exit only in the estimate. */
 export function isAirportExitOnlyForm(form: ArrivalFormState): boolean {
   return !form.transport?.trim() && !form.destination?.trim()
+}
+
+/** Transport chosen but no destination — route ends at that mode's pickup point (no off-airport ride). */
+export function isTransportPickupOnlyForm(form: ArrivalFormState): boolean {
+  return Boolean(form.transport?.trim()) && !form.destination?.trim()
 }
 
 type Cat = { walk: number; wait: number; transit: number }
@@ -38,9 +43,11 @@ export type JourneyEstimateModel = {
   priceHigh: number
 }
 
-/** Backend /predict: models output total minutes in customs; queue ≈ total − 5. */
+/** Backend /predict response slice used by directions. */
 export type ExitPredictionInput = {
   customs_time?: number | null
+  /** Same rule as `is_peak_hour` in backend `main.py` (hour in peak set). */
+  is_peak_hour?: boolean | number | null
 }
 
 function formSeed(form: ArrivalFormState): number {
@@ -56,6 +63,16 @@ function formSeed(form: ArrivalFormState): number {
 function spread(seed: number, salt: number, lo: number, hi: number): number {
   const x = Math.imul(seed ^ salt, 1597334677) >>> 0
   return lo + (x % (hi - lo + 1))
+}
+
+/** Checked-baggage carousel step duration (minutes); 0 if carry-on only. Mirrors backend `baggage_time`. */
+export function estimateCheckedBaggageLineMinutes(form: ArrivalFormState): number {
+  if (!form.checkedBaggage) return 0
+  const seed = formSeed(form)
+  if (form.flightScope === 'international') {
+    return 19 + spread(seed, 40, 0, 11)
+  }
+  return 11 + spread(seed, 41, 0, 9)
 }
 
 function destExtra(destination: string): { ride: number; price: number } {
@@ -161,12 +178,24 @@ export function buildJourneyEstimate(
 ): JourneyEstimateModel {
   const seed = formSeed(form)
   const party = Math.min(8, Math.max(1, form.travelers))
-  const airportOnly = isAirportExitOnlyForm(form)
   const hasTransport = Boolean(form.transport?.trim())
+  const hasDestination = Boolean(form.destination?.trim())
+  const airportLandsideOnly = !hasTransport && !hasDestination
+  const pickupTerminalOnly = hasTransport && !hasDestination
+
   const { ride: destRide, price: destPrice } = destExtra(resolveDestinationBenchmark(form.destination))
-  const tp = airportOnly
-    ? { ride: 0, pickupWait: 0, priceLow: 0, priceHigh: 0 }
-    : transportProfile(hasTransport ? form.transport : 'rideshare', seed, destRide, destPrice)
+
+  let tp: { ride: number; pickupWait: number; priceLow: number; priceHigh: number }
+  if (airportLandsideOnly || pickupTerminalOnly) {
+    tp = { ride: 0, pickupWait: 0, priceLow: 0, priceHigh: 0 }
+  } else {
+    tp = transportProfile(
+      hasTransport ? form.transport : 'rideshare',
+      seed,
+      destRide,
+      destPrice,
+    )
+  }
 
   const deplaneMin = 4
   const toBaggage = walkMinutesToBaggageClaim(form.gate, form.flightScope, seed)
@@ -206,7 +235,8 @@ export function buildJourneyEstimate(
 
     if (predictedTotal != null) {
       customs = predictedTotal
-      const queue = Math.max(0, customs - 5)
+      const queueOverhead = form.intlTravelerSegment === 'citizen' ? 3 : 5
+      const queue = Math.max(0, customs - queueOverhead)
       badge = queue
       const nonQueue = customs - queue
       cat = { walk: nonQueue, wait: queue, transit: 0 }
@@ -227,11 +257,8 @@ export function buildJourneyEstimate(
     })
   }
 
-  if (form.checkedBaggage) {
-    const bagsBase =
-      form.flightScope === 'international'
-        ? 19 + spread(seed, 40, 0, 11)
-        : 11 + spread(seed, 41, 0, 9)
+  const bagsBase = estimateCheckedBaggageLineMinutes(form)
+  if (bagsBase > 0) {
     const bagsWait = Math.round(bagsBase * 0.72)
     const bagsWalk = Math.max(2, bagsBase - bagsWait)
     steps.push({
@@ -241,7 +268,7 @@ export function buildJourneyEstimate(
     })
   }
 
-  if (!airportOnly) {
+  if (!airportLandsideOnly) {
     const walkT = 6 + spread(seed, 50, 0, 5) + (party >= 5 ? 2 : 0)
     const walkMi = Math.round((0.21 + (seed % 19) / 100) * 10) / 10
     steps.push({
@@ -253,22 +280,24 @@ export function buildJourneyEstimate(
 
     const ride = tp.ride
     const pickup = tp.pickupWait
-    steps.push({
-      kind: 'transit',
-      lineMin: ride + pickup,
-      rideMin: ride,
-      pickupWaitMin: pickup,
-      cat: { walk: 0, wait: pickup, transit: ride },
-    })
+    if (!pickupTerminalOnly) {
+      steps.push({
+        kind: 'transit',
+        lineMin: ride + pickup,
+        rideMin: ride,
+        pickupWaitMin: pickup,
+        cat: { walk: 0, wait: pickup, transit: ride },
+      })
 
-    const walkD = 4 + spread(seed, 60, 0, 4) + (party >= 6 ? 1 : 0)
-    const walkDMi = Math.round((0.11 + (seed % 13) / 100) * 10) / 10
-    steps.push({
-      kind: 'walk_dest',
-      lineMin: walkD,
-      miles: walkDMi,
-      cat: { walk: walkD, wait: 0, transit: 0 },
-    })
+      const walkD = 4 + spread(seed, 60, 0, 4) + (party >= 6 ? 1 : 0)
+      const walkDMi = Math.round((0.11 + (seed % 13) / 100) * 10) / 10
+      steps.push({
+        kind: 'walk_dest',
+        lineMin: walkD,
+        miles: walkDMi,
+        cat: { walk: walkD, wait: 0, transit: 0 },
+      })
+    }
   }
 
   steps.push({ kind: 'arrived', lineMin: 0, cat: { walk: 0, wait: 0, transit: 0 } })

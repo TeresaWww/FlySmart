@@ -12,6 +12,7 @@ import {
   Plane,
   Stamp,
   TrainFront,
+  AlertTriangle,
   X,
 } from 'lucide-react'
 import type { ArrivalFormState } from '../types/arrival'
@@ -19,7 +20,7 @@ import type { MessageKey } from '../i18n/dictionaries'
 import { labelDestination, labelGate, labelTransport } from '../i18n/formOptions'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useI18n } from '../i18n/useI18n'
-import { buildJourneyEstimate, isAirportExitOnlyForm, type JourneyStepModel } from '../lib/journeyEstimate'
+import { buildJourneyEstimate, isAirportExitOnlyForm, isTransportPickupOnlyForm, type JourneyStepModel } from '../lib/journeyEstimate'
 import { saveRouteSnapshot } from '../lib/savedRoutesStorage'
 
 type DirectionsPanelProps = {
@@ -63,9 +64,10 @@ function stepTitle(
   t: TFn,
   step: JourneyStepModel,
   labels: { gate: string; transport: string; dest: string },
-  airportExitOnly: boolean,
+  opts: { airportExitOnly: boolean; pickupTerminalOnly: boolean },
 ): string {
   const { gate, transport, dest } = labels
+  const { airportExitOnly, pickupTerminalOnly } = opts
   switch (step.kind) {
     case 'deplane':
       return t('dir_step_deplane', { min: step.lineMin })
@@ -80,13 +82,16 @@ function stepTitle(
     case 'walk_transit':
       return t('dir_step_walk_transit', { transport, walk: step.lineMin })
     case 'transit':
+      if (step.rideMin <= 0) {
+        return t('dir_step_transit_pickup_only', { transport, wait: step.pickupWaitMin })
+      }
       return t('dir_step_transit', { dest, ride: step.rideMin })
     case 'walk_dest':
       return t('dir_step_walk_dest', { walk: step.lineMin })
     case 'arrived':
-      return airportExitOnly
-        ? t('dir_step_arrived_landside')
-        : t('dir_step_arrived', { dest: dest || t('dir_onward_generic') })
+      if (airportExitOnly) return t('dir_step_arrived_landside')
+      if (pickupTerminalOnly) return t('dir_step_arrived_pickup', { transport })
+      return t('dir_step_arrived', { dest: dest || t('dir_onward_generic') })
     default:
       return ''
   }
@@ -107,6 +112,9 @@ function stepDetailBullets(t: TFn, step: JourneyStepModel): string[] {
     case 'walk_transit':
       return [afterMetricSeparator(t('dir_step_walk_transit_detail', { mi: step.miles, walk: step.lineMin }))]
     case 'transit':
+      if (step.rideMin <= 0) {
+        return [t('dir_step_transit_pickup_detail', { wait: step.pickupWaitMin })]
+      }
       return [t('dir_step_transit_detail', { ride: step.rideMin })]
     case 'walk_dest':
       return [afterMetricSeparator(t('dir_step_walk_dest_detail', { mi: step.miles, walk: step.lineMin }))]
@@ -131,6 +139,10 @@ function stepMetrics(step: JourneyStepModel): { label: string; value: string }[]
   const metrics: { label: string; value: string }[] = []
   if ('miles' in step) metrics.push({ label: 'Distance', value: mileRange(step.miles) })
   if (step.kind === 'transit') {
+    if (step.rideMin <= 0) {
+      metrics.push({ label: 'Wait', value: minuteRange(step.pickupWaitMin, 3) })
+      return metrics
+    }
     metrics.push({ label: 'Ride', value: minuteRange(step.rideMin, 5) })
     metrics.push({ label: 'Wait', value: minuteRange(step.pickupWaitMin, 3) })
     return metrics
@@ -153,6 +165,7 @@ export function DirectionsPanel({
   const [saved, setSaved] = useState(false)
   const estimate = useMemo(() => buildJourneyEstimate(form, prediction), [form, prediction])
   const airportExitOnly = useMemo(() => isAirportExitOnlyForm(form), [form])
+  const pickupTerminalOnly = useMemo(() => isTransportPickupOnlyForm(form), [form])
 
   const labels = useMemo(
     () => ({
@@ -189,6 +202,23 @@ export function DirectionsPanel({
 
   const visibleSteps = estimate.steps
   const routeDestLabel = labels.dest || t('dir_onward_generic')
+  const routeOverviewText = pickupTerminalOnly
+    ? t('dir_route_pickup_only', { gate: labels.gate, transport: labels.transport })
+    : airportExitOnly
+      ? t('dir_route_exit_only', { gate: labels.gate })
+      : t('dir_route_line', { gate: labels.gate, dest: routeDestLabel })
+
+  const peakHour =
+    prediction?.is_peak_hour === true ||
+    prediction?.is_peak_hour === 1
+
+  const hasPeakSignal = prediction != null && 'is_peak_hour' in prediction
+
+  const customsQueueChipClass = !hasPeakSignal
+    ? 'inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-900'
+    : peakHour
+      ? 'inline-flex rounded-full border border-red-300 bg-red-50 px-3 py-1 text-xs font-semibold text-red-950'
+      : 'inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-950'
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
@@ -255,11 +285,16 @@ export function DirectionsPanel({
               <MapPinned className="h-4 w-4 shrink-0" aria-hidden />
               {t('dir_overview')}
             </div>
-            <p className="mt-2 text-sm leading-snug text-slate-700">
-              {airportExitOnly
-                ? t('dir_route_exit_only', { gate: labels.gate })
-                : t('dir_route_line', { gate: labels.gate, dest: routeDestLabel })}
-            </p>
+            <p className="mt-2 text-sm leading-snug text-slate-700">{routeOverviewText}</p>
+            {peakHour ? (
+              <div
+                role="status"
+                className="mt-3 flex gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-semibold leading-snug text-red-950 ring-1 ring-red-100"
+              >
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" aria-hidden />
+                <span>{t('dir_peak_warning')}</span>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -267,7 +302,7 @@ export function DirectionsPanel({
           <ol className="mt-1 space-y-0">
             {visibleSteps.map((step, i) => {
               const isLast = i === visibleSteps.length - 1
-              const title = stepTitle(t, step, labels, airportExitOnly)
+              const title = stepTitle(t, step, labels, { airportExitOnly, pickupTerminalOnly })
               const bullets = stepDetailBullets(t, step)
               const metrics = stepMetrics(step)
               return (
@@ -295,8 +330,29 @@ export function DirectionsPanel({
                       {bullets.length > 0 ? (
                         <ul className="mt-2 space-y-1.5">
                           {bullets.map((detail) => (
-                            <li key={detail} className="flex items-start gap-2 text-sm leading-snug text-slate-600">
-                              <span className="mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500" />
+                            <li
+                              key={detail}
+                              className={`flex items-start gap-2 text-sm leading-snug ${
+                                step.kind === 'bags'
+                                  ? !hasPeakSignal
+                                    ? 'text-slate-600'
+                                    : peakHour
+                                      ? 'font-medium text-red-950'
+                                      : 'font-medium text-emerald-950'
+                                  : 'text-slate-600'
+                              }`}
+                            >
+                              <span
+                                className={`mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
+                                  step.kind === 'bags'
+                                    ? !hasPeakSignal
+                                      ? 'bg-sky-500'
+                                      : peakHour
+                                        ? 'bg-red-500'
+                                        : 'bg-emerald-500'
+                                    : 'bg-sky-500'
+                                }`}
+                              />
                               <span>{detail}</span>
                             </li>
                           ))}
@@ -304,25 +360,46 @@ export function DirectionsPanel({
                       ) : null}
                       {metrics.length > 0 ? (
                         <div className="mt-3 flex flex-wrap gap-2">
-                          {metrics.map((metric) => (
+                          {metrics.map((metric) => {
+                            const isWaitStep = step.kind === 'bags' || step.kind === 'customs'
+                            const peakWaitHighlight = hasPeakSignal && peakHour && isWaitStep
+                            const calmWaitHighlight = hasPeakSignal && !peakHour && isWaitStep
+                            return (
                             <span
                               key={metric.label}
-                              className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-[rgb(2,20,50)]"
+                              className={
+                                peakWaitHighlight
+                                  ? 'inline-flex items-center gap-1.5 rounded-full border border-red-300 bg-red-50 px-3 py-1 text-xs font-semibold text-red-950'
+                                  : calmWaitHighlight
+                                    ? 'inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-950'
+                                    : 'inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-[rgb(2,20,50)]'
+                              }
                             >
-                              <span className="text-slate-500">{metric.label}</span>
+                              <span
+                                className={
+                                  peakWaitHighlight
+                                    ? 'text-red-800'
+                                    : calmWaitHighlight
+                                      ? 'text-emerald-800'
+                                      : 'text-slate-500'
+                                }
+                              >
+                                {metric.label}
+                              </span>
                               <span>{metric.value}</span>
                             </span>
-                          ))}
+                            )
+                          })}
                         </div>
                       ) : null}
                       {step.kind === 'customs' ? (
                         <div className="mt-2 flex flex-wrap gap-2">
-                          <p className="inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-900">
+                          <p className={customsQueueChipClass}>
                             {t('dir_step_customs_badge', { min: step.badgeMin })}
                           </p>
                         </div>
                       ) : null}
-                      {step.kind === 'transit' ? (
+                      {step.kind === 'transit' && estimate.priceLow > 0 && estimate.priceHigh > 0 ? (
                         <div className="mt-2 flex flex-wrap items-center gap-2">
                           <span className="inline-flex rounded-full border border-sky-200 bg-white px-3 py-1 text-xs font-semibold text-[rgb(2,20,50)]">
                             {t('dir_step_transit_price', {
@@ -358,7 +435,9 @@ export function DirectionsPanel({
               <div className="mt-1 font-semibold text-[rgb(2,20,50)]">
                 {airportExitOnly && estimate.priceLow === 0 && estimate.priceHigh === 0
                   ? t('dir_footer_price_na')
-                  : t('dir_footer_price', { low: estimate.priceLow, high: estimate.priceHigh })}
+                  : pickupTerminalOnly && estimate.priceLow === 0 && estimate.priceHigh === 0
+                    ? t('dir_footer_price_pickup_na')
+                    : t('dir_footer_price', { low: estimate.priceLow, high: estimate.priceHigh })}
               </div>
             </div>
           </div>

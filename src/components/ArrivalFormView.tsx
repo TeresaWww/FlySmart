@@ -139,35 +139,21 @@ export function ArrivalFormView() {
     // → backend format
     // -----------------------------
     const backendInput = {
-  
       is_domestic: form.flightScope === 'domestic',
-  
-      is_usa:
-        form.intlTravelerSegment === 'citizen',
-  
-      is_trusted:
-        form.trustedTravelerProgram,
-  
+      is_usa: form.intlTravelerSegment === 'citizen',
+      is_trusted: form.trustedTravelerProgram,
       gate: form.gate,
-  
-      has_baggage:
-        form.checkedBaggage,
-  
-      transport:
-        form.transport || 'none'
+      has_baggage: form.checkedBaggage,
+      transport: form.transport,
+      destination: form.destination,
+      travelers: form.travelers,
+      intl_traveler_segment: form.intlTravelerSegment,
     }
-  
-    console.log("Sending:", backendInput)
   
     try {
   
       const result = await getPrediction(backendInput)
       setPrediction(result)
-  
-      console.log("Backend result:", result)
-  
-      // TEMP
-      //alert(`Estimated Exit Time: ${result.total_exit_time} min`)
   
       setResultOpen(true)
   
