@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import type { ArrivalFormState } from '../types/arrival'
 import type { MessageKey } from '../i18n/dictionaries'
+import type { LanguageCode } from '../types/language'
 import { labelDestination, labelGate, labelTransport } from '../i18n/formOptions'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useI18n } from '../i18n/useI18n'
@@ -102,7 +103,13 @@ function afterMetricSeparator(text: string): string {
   return parts.length > 1 ? parts.slice(1).join('·').trim() : text
 }
 
-function stepDetailBullets(t: TFn, step: JourneyStepModel): string[] {
+function transitDetail(t: TFn, step: Extract<JourneyStepModel, { kind: 'transit' }>, transport: string): string {
+  if (transport === 'link') return `~${step.rideMin} min on ${t('opt_tr_link')} (scheduled service)`
+  if (transport === 'bus') return `~${step.rideMin} min by bus (typical service)`
+  return t('dir_step_transit_detail', { ride: step.rideMin })
+}
+
+function stepDetailBullets(t: TFn, step: JourneyStepModel, transport: string): string[] {
   switch (step.kind) {
     case 'gate':
       if (step.baggageInstruction != null) return [step.baggageInstruction]
@@ -115,7 +122,7 @@ function stepDetailBullets(t: TFn, step: JourneyStepModel): string[] {
       if (step.rideMin <= 0) {
         return [t('dir_step_transit_pickup_detail', { wait: step.pickupWaitMin })]
       }
-      return [t('dir_step_transit_detail', { ride: step.rideMin })]
+      return [transitDetail(t, step, transport)]
     case 'walk_dest':
       return [afterMetricSeparator(t('dir_step_walk_dest_detail', { mi: step.miles, walk: step.lineMin }))]
     default:
@@ -133,7 +140,26 @@ function mileRange(center: number): string {
   return `${low}-${high} mi`
 }
 
-function stepMetrics(step: JourneyStepModel): { label: string; value: string }[] {
+function formatDuration(totalMin: number, language: LanguageCode): string {
+  if (totalMin < 60) {
+    if (language === 'zh') return `${totalMin} 分钟`
+    if (language === 'ja') return `${totalMin} 分`
+    if (language === 'ko') return `${totalMin}분`
+    if (language === 'vi') return `${totalMin} phút`
+    return `${totalMin} min`
+  }
+
+  const hours = Math.floor(totalMin / 60)
+  const minutes = totalMin % 60
+  if (language === 'zh') return `${hours} 小时 ${minutes} 分钟`
+  if (language === 'ja') return `${hours} 時間 ${minutes} 分`
+  if (language === 'ko') return `${hours}시간 ${minutes}분`
+  if (language === 'vi') return `${hours} giờ ${minutes} phút`
+  if (language === 'es') return `${hours} h ${minutes} min`
+  return `${hours} hr ${minutes} min`
+}
+
+function stepMetrics(step: JourneyStepModel, transport: string): { label: string; value: string }[] {
   if (step.kind === 'arrived') return []
 
   const metrics: { label: string; value: string }[] = []
@@ -143,7 +169,7 @@ function stepMetrics(step: JourneyStepModel): { label: string; value: string }[]
       metrics.push({ label: 'Wait', value: minuteRange(step.pickupWaitMin, 3) })
       return metrics
     }
-    metrics.push({ label: 'Ride', value: minuteRange(step.rideMin, 5) })
+    metrics.push({ label: transport === 'link' ? 'Train' : transport === 'bus' ? 'Bus' : 'Ride', value: minuteRange(step.rideMin, 5) })
     metrics.push({ label: 'Wait', value: minuteRange(step.pickupWaitMin, 3) })
     return metrics
   }
@@ -303,8 +329,9 @@ export function DirectionsPanel({
             {visibleSteps.map((step, i) => {
               const isLast = i === visibleSteps.length - 1
               const title = stepTitle(t, step, labels, { airportExitOnly, pickupTerminalOnly })
-              const bullets = stepDetailBullets(t, step)
-              const metrics = stepMetrics(step)
+              const transportForStep = form.transport?.trim() ? form.transport : 'rideshare'
+              const bullets = stepDetailBullets(t, step, transportForStep)
+              const metrics = stepMetrics(step, transportForStep)
               return (
                 <li key={`${step.kind}-${i}`}>
                   <div className="flex gap-3 py-3">
@@ -312,7 +339,7 @@ export function DirectionsPanel({
                       <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-sky-50 ring-1 ring-sky-100">
                         <StepIcon
                           step={step}
-                          transport={form.transport?.trim() ? form.transport : 'rideshare'}
+                          transport={transportForStep}
                         />
                       </span>
                       {!isLast ? (
@@ -425,7 +452,7 @@ export function DirectionsPanel({
               </span>
               <p className="text-base font-bold text-[rgb(2,20,50)]">
               {t('dir_footer_total', {
-                min: estimate.totalMin,
+                min: formatDuration(estimate.totalMin, language),
               })}
               </p>
             </div>
