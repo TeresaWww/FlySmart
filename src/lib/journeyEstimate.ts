@@ -1,8 +1,9 @@
 import type { ArrivalFormState } from '../types/arrival'
+import { usesTransitFareParty } from '../types/arrival'
+import { vehicleFareForDestination } from '../data/destinationVehicleFares'
 import { resolveDestinationBenchmark } from './destinationResolve'
 import { walkMinutesToBaggageClaim } from './gateBaggageWalk'
-
-/** No destination and no ground transport — landside exit only in the estimate. */
+import { transitFareTotalUsd } from './transitFare'
 export function isAirportExitOnlyForm(form: ArrivalFormState): boolean {
   return !form.transport?.trim() && !form.destination?.trim()
 }
@@ -51,7 +52,7 @@ export type ExitPredictionInput = {
 }
 
 function formSeed(form: ArrivalFormState): number {
-  const s = `${form.gate}|${form.transport}|${form.destination}|${form.travelers}|${form.flightScope}|${form.intlTravelerSegment}|${form.trustedTravelerProgram ? 1 : 0}|${form.checkedBaggage ? 1 : 0}`
+  const s = `${form.gate}|${form.transport}|${form.destination}|${form.travelers}|${form.fareParty.adults}|${form.fareParty.youth}|${form.fareParty.seniors}|${form.flightScope}|${form.intlTravelerSegment}|${form.trustedTravelerProgram ? 1 : 0}|${form.checkedBaggage ? 1 : 0}`
   let h = 2166136261
   for (let i = 0; i < s.length; i++) {
     h ^= s.charCodeAt(i)
@@ -93,6 +94,50 @@ function destExtra(destination: string): { ride: number; price: number } {
   }
 }
 
+/** Fare totals for a single transport mode (compare cards, shared pricing rules). */
+export function resolveTransportFare(
+  transport: string,
+  form: ArrivalFormState,
+): { priceLow: number; priceHigh: number } {
+  const hasDestination = Boolean(form.destination?.trim())
+  const seed = formSeed({ ...form, transport })
+  const { ride: destRide, price: destPrice } = destExtra(
+    resolveDestinationBenchmark(form.destination),
+  )
+
+  if (usesTransitFareParty(transport)) {
+    const total = transitFareTotalUsd(transport, form.fareParty)
+    if (total != null) return { priceLow: total, priceHigh: total }
+  }
+
+  if (transport === 'rideshare' || transport === 'taxi') {
+    const destId = hasDestination ? form.destination : 'seattle'
+    return vehicleFareForDestination(destId, transport)
+  }
+
+  const profile = transportProfile(transport, seed, destRide, destPrice)
+  return { priceLow: profile.priceLow, priceHigh: profile.priceHigh }
+}
+
+/** Compare cards: bus uses fare-party breakdown; rideshare is one vehicle fare. */
+export function resolveCompareTransportFare(
+  transport: string,
+  form: ArrivalFormState,
+): { priceLow: number; priceHigh: number } {
+  if (transport === 'bus') {
+    const total = transitFareTotalUsd('bus', form.fareParty)
+    if (total != null) return { priceLow: total, priceHigh: total }
+  }
+
+  if (transport === 'rideshare') {
+    const hasDestination = Boolean(form.destination?.trim())
+    const destId = hasDestination ? form.destination : 'seattle'
+    return vehicleFareForDestination(destId, 'rideshare')
+  }
+
+  return resolveTransportFare(transport, form)
+}
+
 function transportProfile(
   transport: string,
   seed: number,
@@ -112,7 +157,7 @@ function transportProfile(
         ride: 42 + spread(seed, 1, 0, 10) + Math.round(d * 0.35),
         pickupWait: spread(seed, 2, 4, 11),
         priceLow: 3,
-        priceHigh: 6,
+        priceHigh: 3,
       }
     case 'bus':
       return {
@@ -189,12 +234,12 @@ export function buildJourneyEstimate(
   if (airportLandsideOnly || pickupTerminalOnly) {
     tp = { ride: 0, pickupWait: 0, priceLow: 0, priceHigh: 0 }
   } else {
-    tp = transportProfile(
-      hasTransport ? form.transport : 'rideshare',
-      seed,
-      destRide,
-      destPrice,
-    )
+    const activeTransport = hasTransport ? form.transport : 'rideshare'
+    tp = transportProfile(activeTransport, seed, destRide, destPrice)
+    if (!pickupTerminalOnly) {
+      const fares = resolveTransportFare(activeTransport, form)
+      tp = { ...tp, priceLow: fares.priceLow, priceHigh: fares.priceHigh }
+    }
   }
 
   const deplaneMin = 4

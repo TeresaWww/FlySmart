@@ -14,6 +14,7 @@ import { FormSelect } from './FormSelect'
 import { GateInput } from './GateInput'
 import { DestinationInput } from './DestinationInput'
 import { TravelerStepper } from './TravelerStepper'
+import { TransitFarePartyInputs } from './TransitFarePartyInputs'
 import { GroundTransportationCard } from './GroundTransportationCard'
 import { AirportInfoCard } from './AirportInfoCard'
 import { DirectionsPanel } from './DirectionsPanel'
@@ -23,7 +24,7 @@ import { findGateGroup } from '../data/seaTacGates'
 import { useI18n } from '../i18n/useI18n'
 import { useArrivalForm } from '../context/ArrivalFormContext'
 import { validateArrivalForm, type FieldErrors } from '../lib/validation'
-import { type ArrivalFormState, type FlightScope, type IntlTravelerSegment } from '../types/arrival'
+import { type ArrivalFormState, type FlightScope, type IntlTravelerSegment, usesTransitFareParty } from '../types/arrival'
 
 const htmlLang = {
   en: 'en',
@@ -122,6 +123,34 @@ export function ArrivalFormView() {
       if (prev.gate && !findGateGroup(prev.gate, flightScope)) {
         return { ...next, gate: '' as const }
       }
+      return next
+    })
+  }
+
+  const usesFareParty = usesTransitFareParty(form.transport)
+
+  const onTransportChange = (transport: string) => {
+    setForm((prev) => {
+      const nextUses = usesTransitFareParty(transport)
+      const prevUses = usesTransitFareParty(prev.transport)
+      if (nextUses && !prevUses) {
+        return {
+          ...prev,
+          transport,
+          fareParty: { adults: prev.travelers, youth: 0, seniors: 0 },
+          travelers: prev.travelers,
+        }
+      }
+      if (!nextUses && prevUses) {
+        const total = prev.fareParty.adults + prev.fareParty.youth + prev.fareParty.seniors
+        return { ...prev, transport, travelers: total || 1 }
+      }
+      return { ...prev, transport }
+    })
+    setErrors((e) => {
+      if (!('transport' in e)) return e
+      const next = { ...e }
+      delete next.transport
       return next
     })
   }
@@ -264,7 +293,7 @@ export function ArrivalFormView() {
               icon={Car}
               value={form.transport}
               options={transports}
-              onChange={(transport) => update('transport', transport)}
+              onChange={onTransportChange}
               error={errors.transport}
               allowBlank
             />
@@ -322,12 +351,21 @@ export function ArrivalFormView() {
           </div>
 
           <div className="mt-7">
-            <TravelerStepper
-              value={form.travelers}
-              min={1}
-              max={12}
-              onChange={(travelers) => update('travelers', travelers)}
-            />
+            {usesFareParty ? (
+              <TransitFarePartyInputs
+                value={form.fareParty}
+                onChange={(fareParty, travelers) =>
+                  setForm((prev) => ({ ...prev, fareParty, travelers }))
+                }
+              />
+            ) : (
+              <TravelerStepper
+                value={form.travelers}
+                min={1}
+                max={12}
+                onChange={(travelers) => update('travelers', travelers)}
+              />
+            )}
           </div>
 
           <button

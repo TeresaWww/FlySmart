@@ -1,4 +1,4 @@
-import { defaultFormState, type ArrivalFormState } from '../types/arrival'
+import { defaultFormState, sumFareParty, type ArrivalFormState, type TransitFareParty } from '../types/arrival'
 
 const STORAGE_KEY = 'flysmart-saved-routes-v1'
 const MAX_ROUTES = 25
@@ -9,10 +9,24 @@ export type SavedRouteEntry = {
   form: ArrivalFormState
 }
 
+function normalizeFareParty(raw: unknown, travelers: number): TransitFareParty {
+  if (raw && typeof raw === 'object') {
+    const o = raw as Record<string, unknown>
+    const adults = typeof o.adults === 'number' ? Math.max(0, Math.round(o.adults)) : 0
+    const youth = typeof o.youth === 'number' ? Math.max(0, Math.round(o.youth)) : 0
+    const seniors = typeof o.seniors === 'number' ? Math.max(0, Math.round(o.seniors)) : 0
+    const total = adults + youth + seniors
+    if (total >= 1 && total <= 12) return { adults, youth, seniors }
+  }
+  return { adults: travelers, youth: 0, seniors: 0 }
+}
+
 export function normalizeArrivalForm(raw: unknown): ArrivalFormState {
   if (!raw || typeof raw !== 'object') return { ...defaultFormState }
   const o = raw as Record<string, unknown>
   const travelers = typeof o.travelers === 'number' ? Math.min(12, Math.max(1, Math.round(o.travelers))) : 1
+  const fareParty = normalizeFareParty(o.fareParty, travelers)
+  const syncedTravelers = sumFareParty(fareParty)
   const flightScope: ArrivalFormState['flightScope'] =
     o.flightScope === 'international' ? 'international' : 'domestic'
   const gate = typeof o.gate === 'string' ? o.gate : ''
@@ -25,7 +39,8 @@ export function normalizeArrivalForm(raw: unknown): ArrivalFormState {
     gate,
     transport: typeof o.transport === 'string' ? o.transport : '',
     destination: typeof o.destination === 'string' ? o.destination : '',
-    travelers,
+    travelers: syncedTravelers,
+    fareParty,
   }
 }
 

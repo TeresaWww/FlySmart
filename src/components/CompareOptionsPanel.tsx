@@ -2,7 +2,8 @@ import { useEffect, useMemo } from 'react'
 import { Clock, DollarSign, Footprints, X } from 'lucide-react'
 import type { ArrivalFormState } from '../types/arrival'
 import { useI18n } from '../i18n/useI18n'
-import { buildJourneyEstimate } from '../lib/journeyEstimate'
+import { buildJourneyEstimate, resolveCompareTransportFare } from '../lib/journeyEstimate'
+import { formatTransitFareUsd } from '../lib/transitFare'
 import { labelTransport } from '../i18n/formOptions'
 
 type Props = {
@@ -26,6 +27,13 @@ function clampCompareList(list: string[]): string[] {
   return uniq.slice(0, 3)
 }
 
+function formatCompareCost(transport: string, low: number, high: number): string {
+  if (transport === 'bus' || transport === 'link' || low === high) {
+    return `$${formatTransitFareUsd(low)} USD`
+  }
+  return `$${low}–$${high} USD`
+}
+
 export function CompareOptionsPanel({ open, form, transports, onClose }: Props) {
   const { language, t } = useI18n()
 
@@ -42,14 +50,15 @@ export function CompareOptionsPanel({ open, form, transports, onClose }: Props) 
     const list = clampCompareList(transports)
     return list.map((transport) => {
       const estimate = buildJourneyEstimate({ ...form, transport })
+      const fare = resolveCompareTransportFare(transport, form)
       const walkToPickupMin = estimate.steps.find((s) => s.kind === 'walk_transit')?.lineMin ?? 0
       return {
         transport,
         title: labelTransport(language, transport),
         totalMin: estimate.totalMin,
         walkToPickupMin,
-        costLow: estimate.priceLow,
-        costHigh: estimate.priceHigh,
+        costLow: fare.priceLow,
+        costHigh: fare.priceHigh,
       } satisfies CompareCardModel
     })
   }, [form, transports, language])
@@ -143,7 +152,7 @@ export function CompareOptionsPanel({ open, form, transports, onClose }: Props) 
                         <span>{t('cmp_metric_cost')}</span>
                       </div>
                       <span className="text-sm font-bold text-[rgb(2,20,50)]">
-                        {c.costLow}–{c.costHigh} USD
+                        {formatCompareCost(c.transport, c.costLow, c.costHigh)}
                       </span>
                     </div>
 

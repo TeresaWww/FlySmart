@@ -22,7 +22,11 @@ import { labelDestination, labelGate, labelTransport } from '../i18n/formOptions
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useI18n } from '../i18n/useI18n'
 import { buildJourneyEstimate, isAirportExitOnlyForm, isTransportPickupOnlyForm, type JourneyStepModel } from '../lib/journeyEstimate'
+import { formatTransitFareUsd } from '../lib/transitFare'
 import { saveRouteSnapshot } from '../lib/savedRoutesStorage'
+import { LinkFareInfoButton } from './LinkFareInfoButton'
+import { BusFareInfoButton } from './BusFareInfoButton'
+import { usesTransitFareParty } from '../types/arrival'
 
 type DirectionsPanelProps = {
   open: boolean
@@ -60,6 +64,29 @@ function StepIcon({ step, transport }: { step: JourneyStepModel; transport: stri
 }
 
 type TFn = (key: MessageKey, vars?: Record<string, string | number>) => string
+
+function exactFareAmount(low: number): string {
+  return formatTransitFareUsd(low)
+}
+
+function fareStepLabel(t: TFn, low: number, high: number, transport: string): string {
+  if (usesTransitFareParty(transport)) {
+    return t('dir_step_transit_price_exact', { amount: exactFareAmount(low) })
+  }
+  return t('dir_step_transit_price', { low, high })
+}
+
+function fareFooterLabel(t: TFn, low: number, high: number, transport: string): string {
+  if (usesTransitFareParty(transport)) {
+    return t('dir_footer_price_exact', { amount: exactFareAmount(low) })
+  }
+  return t('dir_footer_price', { low, high })
+}
+
+function showTransitFareEstimate(transport: string, low: number, high: number): boolean {
+  if (usesTransitFareParty(transport)) return true
+  return low > 0 && high > 0
+}
 
 function stepTitle(
   t: TFn,
@@ -426,14 +453,22 @@ export function DirectionsPanel({
                           </p>
                         </div>
                       ) : null}
-                      {step.kind === 'transit' && estimate.priceLow > 0 && estimate.priceHigh > 0 ? (
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <span className="inline-flex rounded-full border border-sky-200 bg-white px-3 py-1 text-xs font-semibold text-[rgb(2,20,50)]">
-                            {t('dir_step_transit_price', {
-                              low: estimate.priceLow,
-                              high: estimate.priceHigh,
-                            })}
-                          </span>
+                      {step.kind === 'transit' &&
+                      showTransitFareEstimate(transportForStep, estimate.priceLow, estimate.priceHigh) ? (
+                        <div className="mt-2">
+                          {transportForStep === 'link' ? (
+                            <LinkFareInfoButton
+                              label={fareStepLabel(t, estimate.priceLow, estimate.priceHigh, transportForStep)}
+                            />
+                          ) : transportForStep === 'bus' ? (
+                            <BusFareInfoButton
+                              label={fareStepLabel(t, estimate.priceLow, estimate.priceHigh, transportForStep)}
+                            />
+                          ) : (
+                            <span className="inline-flex rounded-full border border-sky-200 bg-white px-3 py-1 text-xs font-semibold text-[rgb(2,20,50)]">
+                              {fareStepLabel(t, estimate.priceLow, estimate.priceHigh, transportForStep)}
+                            </span>
+                          )}
                         </div>
                       ) : null}
                     </div>
@@ -445,7 +480,7 @@ export function DirectionsPanel({
         </div>
 
         <div className="shrink-0 border-t border-slate-100 bg-white px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-          <div className="flex items-stretch justify-between gap-4 rounded-2xl border-2 border-sky-600 bg-sky-50/40 px-4 py-3.5">
+          <div className="flex items-stretch justify-between gap-4 overflow-visible rounded-2xl border-2 border-sky-600 bg-sky-50/40 px-4 py-3.5">
             <div className="flex min-w-0 items-center gap-2">
               <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white ring-1 ring-sky-200">
                 <Clock className="h-5 w-5 text-[rgb(2,20,50)]" aria-hidden />
@@ -456,15 +491,37 @@ export function DirectionsPanel({
               })}
               </p>
             </div>
-            <div className="shrink-0 text-right text-xs leading-relaxed text-slate-700">
+            <div className="relative shrink-0 overflow-visible text-right text-xs leading-relaxed text-slate-700">
               <div>{t('dir_footer_walk', { min: estimate.sumWalk })}</div>
               <div>{t('dir_footer_transit', { min: estimate.sumTransit })}</div>
-              <div className="mt-1 font-semibold text-[rgb(2,20,50)]">
-                {airportExitOnly && estimate.priceLow === 0 && estimate.priceHigh === 0
-                  ? t('dir_footer_price_na')
-                  : pickupTerminalOnly && estimate.priceLow === 0 && estimate.priceHigh === 0
-                    ? t('dir_footer_price_pickup_na')
-                    : t('dir_footer_price', { low: estimate.priceLow, high: estimate.priceHigh })}
+              <div className="mt-1">
+                {form.transport === 'link' &&
+                !(airportExitOnly && estimate.priceLow === 0 && estimate.priceHigh === 0) &&
+                !(pickupTerminalOnly && estimate.priceLow === 0 && estimate.priceHigh === 0) ? (
+                  <LinkFareInfoButton
+                    className="ml-auto"
+                    panelAlign="right"
+                    panelPlacement="above"
+                    label={fareFooterLabel(t, estimate.priceLow, estimate.priceHigh, form.transport)}
+                  />
+                ) : form.transport === 'bus' &&
+                  !(airportExitOnly && estimate.priceLow === 0 && estimate.priceHigh === 0) &&
+                  !(pickupTerminalOnly && estimate.priceLow === 0 && estimate.priceHigh === 0) ? (
+                  <BusFareInfoButton
+                    className="ml-auto"
+                    panelAlign="right"
+                    panelPlacement="above"
+                    label={fareFooterLabel(t, estimate.priceLow, estimate.priceHigh, form.transport)}
+                  />
+                ) : (
+                  <p className="font-semibold text-[rgb(2,20,50)]">
+                    {airportExitOnly && estimate.priceLow === 0 && estimate.priceHigh === 0
+                      ? t('dir_footer_price_na')
+                      : pickupTerminalOnly && estimate.priceLow === 0 && estimate.priceHigh === 0
+                        ? t('dir_footer_price_pickup_na')
+                        : t('dir_footer_price', { low: estimate.priceLow, high: estimate.priceHigh })}
+                  </p>
+                )}
               </div>
             </div>
           </div>
